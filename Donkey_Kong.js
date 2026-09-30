@@ -207,7 +207,7 @@ function loadLevel(level) {
     ladders.push(new Ladder(430, 435, 20, 110));
     ladders.push(new Ladder(110, 325, 20, 110));
     ladders.push(new Ladder(430, 215, 20, 110));
-    ladders.push(new Ladder(220, 115, 20, 110)); // Última escalera
+    ladders.push(new Ladder(220, 110, 20, 120)); // Llega hasta la meta de Pauline
 
     // Escaleras parciales / trampas
     ladders.push(new Ladder(270, 560, 20, 65));
@@ -238,16 +238,22 @@ function draw() {
         gameState = "PLAYING";
     }
 
-    // Renderizar Meta (Corazón rosa al final)
+    // Pauline identifica el sensor de meta existente.
     push();
     fill(255, 105, 180);
     noStroke();
     rectMode(CENTER);
-    rect(goal.position.x, goal.position.y, 20, 10);
+    triangle(goal.position.x, goal.position.y - 8,
+        goal.position.x - 10, goal.position.y + 16,
+        goal.position.x + 10, goal.position.y + 16);
+    fill(255, 210, 170);
+    rect(goal.position.x, goal.position.y - 13, 10, 10);
+    fill(160, 70, 30);
+    rect(goal.position.x, goal.position.y - 20, 12, 5);
     fill(255, 0, 80);
     textAlign(CENTER, CENTER);
     textSize(16);
-    text("♥", goal.position.x, goal.position.y - 15);
+    text("♥", goal.position.x + 18, goal.position.y - 12);
     pop();
 
     if (gameState === "PLAYING") {
