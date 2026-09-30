@@ -3,6 +3,7 @@ class Mario {
         this.w = w;
         this.h = h;
         this.isGrounded = false;
+        this.groundContacts = new Set();
         this.touchingLadder = false;
         this.isClimbing = false;
         this.facing = 1; // 1 = derecha, -1 = izquierda
@@ -46,6 +47,8 @@ class Mario {
         this.body.isSensor = climbingState;
 
         if (climbingState) {
+            this.groundContacts.clear();
+            this.isGrounded = false;
             Matter.Body.setVelocity(this.body, { x: 0, y: 0 });
         }
     }
@@ -84,12 +87,13 @@ class Mario {
     }
 
     jump() {
-        if ((this.isGrounded || Math.abs(this.body.velocity.y) < 0.2) && !this.isClimbing) {
+        if (this.isGrounded && !this.isClimbing) {
             Matter.Body.setVelocity(this.body, {
                 x: this.body.velocity.x,
                 y: -5.2
             });
             this.isGrounded = false;
+            this.groundContacts.clear();
         }
     }
 

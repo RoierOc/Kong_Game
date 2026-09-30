@@ -109,7 +109,9 @@ function setup() {
             const otherBody = isA ? bodyB : (isB ? bodyA : null);
 
             if (otherBody) {
-                if (otherBody.isPlatform && !mario.isClimbing) {
+                const landedOnTop = isA ? pair.collision.normal.y < -0.5 : pair.collision.normal.y > 0.5;
+                if (otherBody.isPlatform && landedOnTop && !mario.isClimbing) {
+                    mario.groundContacts.add(otherBody);
                     mario.isGrounded = true;
                 }
                 if (otherBody.isLadder) {
@@ -130,7 +132,10 @@ function setup() {
             const otherBody = isA ? pair.bodyB : (isB ? pair.bodyA : null);
 
             if (otherBody) {
-                if (otherBody.isPlatform) mario.isGrounded = false;
+                if (otherBody.isPlatform) {
+                    mario.groundContacts.delete(otherBody);
+                    mario.isGrounded = mario.groundContacts.size > 0;
+                }
                 if (otherBody.isLadder) mario.touchingLadder = false;
             }
         }
