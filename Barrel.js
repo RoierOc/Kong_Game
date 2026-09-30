@@ -57,8 +57,6 @@ updateLadderFall() {
     }
 
     show() {
-        this.updateLadderFall();
-
         push();
         translate(this.body.position.x, this.body.position.y);
         rotate(this.body.angle);

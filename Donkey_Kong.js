@@ -248,6 +248,10 @@ function draw() {
 
     if (gameState === "PLAYING") {
         Engine.update(engine);
+        if (gameState === "PLAYING") {
+            for (let barrel of barrels) barrel.updateLadderFall();
+            for (let fire of fireballs) fire.update();
+        }
         if (mario.body.position.y > height + 40) playerDied();
 
         if (gameState === "PLAYING" && millis() - lastBarrelTime > barrelInterval) {
@@ -259,7 +263,7 @@ function draw() {
     // Renderizar Entidades
     for (let i = barrels.length - 1; i >= 0; i--) {
         barrels[i].show();
-        if (barrels[i].isOffscreen()) {
+        if (gameState === "PLAYING" && barrels[i].isOffscreen()) {
             destroyBarrel(barrels[i].body, 0);
         }
     }

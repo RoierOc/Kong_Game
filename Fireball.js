@@ -47,8 +47,6 @@ class Fireball {
     }
 
     show() {
-        this.update();
-
         push();
         translate(this.body.position.x, this.body.position.y);
         
