@@ -20,7 +20,8 @@ let currentLevel = 1;
 const maxLevels = 3;
 let score = 0;
 let lives = 3;
-let gameState = "PLAYING"; // "PLAYING", "WIN_LEVEL", "GAME_OVER", "GAME_CLEAR"
+let gameState = "PLAYING"; // "PLAYING", "DYING", "WIN_LEVEL", "GAME_OVER", "GAME_CLEAR"
+let respawnAt = 0;
 
 let goal;
 let lastBarrelTime = 0;
@@ -51,6 +52,7 @@ function setup() {
     // --- DETECCIÓN DE IMPACTOS Y EVENTOS ---
     Matter.Events.on(engine, 'collisionStart', (event) => {
         for (let pair of event.pairs) {
+            if (gameState !== "PLAYING") continue;
             const bodyA = pair.bodyA;
             const bodyB = pair.bodyB;
 
@@ -148,11 +150,12 @@ function setup() {
 
 // --- MANEJO DE PÉRDIDA DE VIDAS ---
 function playerDied() {
+    if (gameState !== "PLAYING") return;
     lives--;
     if (lives > 0) {
         // Reaparecer al inicio del nivel actual
-        Matter.Body.setPosition(mario.body, { x: 60, y: 690 });
-        Matter.Body.setVelocity(mario.body, { x: 0, y: 0 });
+        gameState = "DYING";
+        respawnAt = millis() + 500;
     } else {
         // Te quedaste sin vidas -> Game Over
         gameState = "GAME_OVER";
@@ -162,6 +165,8 @@ function playerDied() {
 // --- CARGADOR DE NIVELES ---
 function loadLevel(level) {
     World.clear(world, false);
+    Engine.clear(engine);
+    lastBarrelTime = millis();
     
     platforms = [];
     ladders = [];
@@ -222,6 +227,10 @@ function loadLevel(level) {
 
 function draw() {
     background(10, 10, 15);
+    if (gameState === "DYING" && millis() >= respawnAt) {
+        loadLevel(currentLevel);
+        gameState = "PLAYING";
+    }
 
     // Renderizar Meta (Corazón rosa al final)
     push();
@@ -237,8 +246,9 @@ function draw() {
 
     if (gameState === "PLAYING") {
         Engine.update(engine);
+        if (mario.body.position.y > height + 40) playerDied();
 
-        if (millis() - lastBarrelTime > barrelInterval) {
+        if (gameState === "PLAYING" && millis() - lastBarrelTime > barrelInterval) {
             barrels.push(new Barrel(100, 60, 12));
             lastBarrelTime = millis();
         }
@@ -298,6 +308,9 @@ function draw() {
     } 
     else if (gameState === "GAME_OVER") {
         showOverlay("¡GAME OVER!", "Presiona 'R' para volver al Nivel 1", `Puntaje Final: ${score}`);
+    }
+    else if (gameState === "DYING") {
+        showOverlay("¡GOLPEADO!", "Reiniciando el tablero");
     }
     else if (gameState === "GAME_CLEAR") {
         showOverlay("¡JUEGO COMPLETADO!", "Presiona 'R' para jugar de nuevo", `Puntaje Final: ${score}`);
