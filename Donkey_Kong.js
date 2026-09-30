@@ -62,13 +62,7 @@ function setup() {
 
             // 1. EL FUEGO DESTRUYE EL BARRIL Y DA PUNTOS (+100)
             if (barrel && fire) {
-                const barrelIndex = barrels.findIndex(b => b.body === barrel);
-                if (barrelIndex !== -1) {
-                    barrels[barrelIndex].removeFromWorld();
-                    barrels.splice(barrelIndex, 1);
-                    score += 100; // Puntos adicionales
-                    console.log("¡El fuego destruyó un barril! +100 PTS");
-                }
+                destroyBarrel(barrel, 100);
             }
 
             // 2. CONDICIÓN DE VICTORIA (Mario llega al final de la última escalera)
@@ -146,6 +140,14 @@ function setup() {
             }
         }
     });
+}
+
+function destroyBarrel(body, points) {
+    const index = barrels.findIndex(b => b.body === body);
+    if (index === -1) return;
+    barrels[index].removeFromWorld();
+    barrels.splice(index, 1);
+    score += points;
 }
 
 // --- MANEJO DE PÉRDIDA DE VIDAS ---
@@ -258,8 +260,7 @@ function draw() {
     for (let i = barrels.length - 1; i >= 0; i--) {
         barrels[i].show();
         if (barrels[i].isOffscreen()) {
-            barrels[i].removeFromWorld();
-            barrels.splice(i, 1);
+            destroyBarrel(barrels[i].body, 0);
         }
     }
 

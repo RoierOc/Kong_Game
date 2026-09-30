@@ -40,19 +40,6 @@ class Fireball {
         }
         Matter.Body.setVelocity(this.body, { x: this.direction * this.speed, y: this.body.velocity.y });
 
-        // --- CHEQUEO DIRECTO DE DESTRUCCIÓN DE BARRILES POR PROXIMIDAD ---
-        // (Garantiza la eliminación sin importar si el evento de Matter.js se retrasa)
-        for (let i = barrels.length - 1; i >= 0; i--) {
-            let b = barrels[i];
-            let d = dist(this.body.position.x, this.body.position.y, b.body.position.x, b.body.position.y);
-            
-            // Si la distancia entre el centro del fuego y del barril es menor a la suma de sus radios:
-            if (d < this.r + b.r) {
-                b.removeFromWorld();
-                barrels.splice(i, 1);
-                console.log("¡Fuego destruyó un barril!");
-            }
-        }
     }
 
     removeFromWorld() {

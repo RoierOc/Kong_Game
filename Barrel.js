@@ -12,7 +12,7 @@ class Barrel {
                 group: 0,
                 category: CATEGORY_BARREL,
                 // Al nacer, colisiona con todo (Plataformas, Mario, Fondo)
-                mask: CATEGORY_DEFAULT | CATEGORY_PLATFORM | CATEGORY_MARIO | CATEGORY_LADDER
+                mask: CATEGORY_DEFAULT | CATEGORY_PLATFORM | CATEGORY_MARIO | CATEGORY_LADDER | CATEGORY_FIRE
             }
         });
 
@@ -34,7 +34,7 @@ updateLadderFall() {
             this.isFallingLadder = false;
 
             // 1. Restaurar colisión con plataformas
-            this.body.collisionFilter.mask = CATEGORY_DEFAULT | CATEGORY_PLATFORM | CATEGORY_MARIO | CATEGORY_LADDER;
+            this.body.collisionFilter.mask = CATEGORY_DEFAULT | CATEGORY_PLATFORM | CATEGORY_MARIO | CATEGORY_LADDER | CATEGORY_FIRE;
 
             // 2. Determinar la dirección según la altura de la pantalla (Zigzag)
             // Si está en viga par o impar, le damos un empuje inicial para que empiece a rodar
