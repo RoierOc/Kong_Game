@@ -24,6 +24,7 @@ let gameState = "PLAYING"; // "PLAYING", "DYING", "WIN_LEVEL", "GAME_OVER", "GAM
 let respawnAt = 0;
 
 let goal;
+const kong = { x: 80, y: 52 };
 let lastBarrelTime = 0;
 let barrelInterval = 3200;
 
@@ -231,6 +232,7 @@ function loadLevel(level) {
 
 function draw() {
     background(10, 10, 15);
+    drawDonkeyKong();
     if (gameState === "DYING" && millis() >= respawnAt) {
         loadLevel(currentLevel);
         gameState = "PLAYING";
@@ -257,7 +259,7 @@ function draw() {
         if (mario.body.position.y > height + 40) playerDied();
 
         if (gameState === "PLAYING" && millis() - lastBarrelTime > barrelInterval) {
-            barrels.push(new Barrel(100, 60, 12));
+            barrels.push(new Barrel(kong.x + 38, kong.y + 12, 12));
             lastBarrelTime = millis();
         }
     }
@@ -322,6 +324,27 @@ function draw() {
     else if (gameState === "GAME_CLEAR") {
         showOverlay("¡JUEGO COMPLETADO!", "Presiona 'R' para jugar de nuevo", `Puntaje Final: ${score}`);
     }
+}
+
+function drawDonkeyKong() {
+    push();
+    translate(kong.x, kong.y);
+    rectMode(CENTER);
+    noStroke();
+    fill(120, 65, 30);
+    rect(0, 5, 38, 40);
+    rect(-25, 8, 16, 32);
+    rect(25, 8, 16, 32);
+    rect(-12, 25, 18, 10);
+    rect(12, 25, 18, 10);
+    fill(220, 165, 100);
+    rect(0, -10, 26, 22);
+    rect(0, 12, 22, 16);
+    fill(0);
+    rect(-6, -14, 4, 4);
+    rect(6, -14, 4, 4);
+    rect(0, -3, 14, 3);
+    pop();
 }
 
 function showOverlay(title, subtitle, extraInfo = "") {
