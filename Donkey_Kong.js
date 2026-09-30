@@ -24,6 +24,7 @@ let gameState = "PLAYING"; // "PLAYING", "DYING", "WIN_LEVEL", "GAME_OVER", "GAM
 let respawnAt = 0;
 
 let goal;
+let oilDrum;
 const kong = { x: 80, y: 52 };
 let lastBarrelTime = 0;
 let barrelInterval = 3200;
@@ -62,6 +63,9 @@ function setup() {
             const barrel = bodyA.isBarrel ? bodyA : (bodyB.isBarrel ? bodyB : null);
             const ladder = bodyA.isLadder ? bodyA : (bodyB.isLadder ? bodyB : null);
             const fire = bodyA.isFireball ? bodyA : (bodyB.isFireball ? bodyB : null);
+            if (barrel && (bodyA === oilDrum || bodyB === oilDrum)) {
+                consumeBarrelAtOilDrum(barrel);
+            }
 
             // 1. EL FUEGO DESTRUYE EL BARRIL Y DA PUNTOS (+100)
             if (barrel && fire) {
@@ -154,6 +158,14 @@ function destroyBarrel(body, points) {
 }
 
 // --- MANEJO DE PÉRDIDA DE VIDAS ---
+function consumeBarrelAtOilDrum(body) {
+    if (!barrels.some(barrel => barrel.body === body)) return;
+    destroyBarrel(body, 0);
+    if (fireballs.length < currentLevel + 1) {
+        fireballs.push(new Fireball(oilDrum.position.x, oilDrum.position.y - 28, 10));
+    }
+}
+
 function playerDied() {
     if (gameState !== "PLAYING") return;
     lives--;
@@ -187,6 +199,11 @@ function loadLevel(level) {
     // Punto exacto de meta en el final de la última escalera (X: 220, Y: 55)
     goal = Bodies.rectangle(220, 55, 30, 20, { isStatic: true, isSensor: true });
     World.add(world, goal);
+    oilDrum = Bodies.rectangle(28, 692, 32, 36, {
+        isStatic: true, isSensor: true,
+        collisionFilter: { group: 0, category: CATEGORY_FIRE, mask: CATEGORY_BARREL }
+    });
+    World.add(world, oilDrum);
 
     const pWidth = 460;
     const pHeight = 16;
@@ -282,6 +299,7 @@ function draw() {
     for (let platform of platforms) platform.show();
     for (let ladder of ladders) ladder.show();
     mario.show();
+    drawOilDrum();
 
     // --- INTERFAZ DE USUARIO / HUD (PUNTOS Y VIDAS) ---
     push();
@@ -330,6 +348,25 @@ function draw() {
     else if (gameState === "GAME_CLEAR") {
         showOverlay("¡JUEGO COMPLETADO!", "Presiona 'R' para jugar de nuevo", `Puntaje Final: ${score}`);
     }
+}
+
+function drawOilDrum() {
+    push();
+    translate(oilDrum.position.x, oilDrum.position.y);
+    rectMode(CENTER);
+    fill(35, 80, 160);
+    stroke(120, 190, 255);
+    rect(0, 0, 32, 36);
+    noStroke();
+    fill(255, 90, 0);
+    triangle(-14, -18, 0, -40, 14, -18);
+    fill(255, 220, 60);
+    triangle(-7, -18, 0, -32, 7, -18);
+    fill(255);
+    textSize(12);
+    textAlign(CENTER, CENTER);
+    text('OIL', 0, 2);
+    pop();
 }
 
 function drawDonkeyKong() {
