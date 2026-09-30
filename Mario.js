@@ -14,6 +14,7 @@ class Mario {
             frictionAir: 0.01,
             restitution: 0.0,
             collisionFilter: {
+                group: 0,
                 category: CATEGORY_MARIO,
                 mask: CATEGORY_DEFAULT | CATEGORY_PLATFORM | CATEGORY_BARREL | CATEGORY_LADDER | CATEGORY_FIRE
             }

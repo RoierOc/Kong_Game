@@ -161,8 +161,8 @@ function loadLevel(level) {
 
     mario = new Mario(60, 690, 24, 34);
 
-    const wallLeft = Bodies.rectangle(-10, height / 2, 20, height, { isStatic: true, collisionFilter: { category: CATEGORY_DEFAULT } });
-    const wallRight = Bodies.rectangle(width + 10, height / 2, 20, height, { isStatic: true, collisionFilter: { category: CATEGORY_DEFAULT } });
+    const wallLeft = Bodies.rectangle(-10, height / 2, 20, height, { isStatic: true, collisionFilter: { group: 0, category: CATEGORY_DEFAULT, mask: 0xFFFF } });
+    const wallRight = Bodies.rectangle(width + 10, height / 2, 20, height, { isStatic: true, collisionFilter: { group: 0, category: CATEGORY_DEFAULT, mask: 0xFFFF } });
     World.add(world, [wallLeft, wallRight]);
 
     // Punto exacto de meta en el final de la última escalera (X: 220, Y: 55)

@@ -9,7 +9,9 @@ constructor(x, y, w, h, angle = 0) {
             friction: 0.01,
             frictionStatic: 0.0,
             collisionFilter: {
-                category: CATEGORY_PLATFORM
+                group: 0,
+                category: CATEGORY_PLATFORM,
+                mask: 0xFFFF
             }
         });
 

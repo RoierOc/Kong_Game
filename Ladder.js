@@ -6,7 +6,8 @@ class Ladder {
         // Cuerpo físico estático en modo "sensor" (no bloquea a Mario, solo detecta)
         this.body = Bodies.rectangle(x, y, w, h, {
             isStatic: true,
-            isSensor: true 
+            isSensor: true,
+            collisionFilter: { group: 0, category: CATEGORY_LADDER, mask: CATEGORY_MARIO | CATEGORY_BARREL }
         });
 
         this.body.isLadder = true;

@@ -9,6 +9,7 @@ class Barrel {
             restitution: 0.2,
             density: 0.01,
             collisionFilter: {
+                group: 0,
                 category: CATEGORY_BARREL,
                 // Al nacer, colisiona con todo (Plataformas, Mario, Fondo)
                 mask: CATEGORY_DEFAULT | CATEGORY_PLATFORM | CATEGORY_MARIO | CATEGORY_LADDER

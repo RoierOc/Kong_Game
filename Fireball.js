@@ -9,6 +9,7 @@ class Fireball {
             restitution: 0.8,
             density: 0.01,
             collisionFilter: {
+                group: 0,
                 category: CATEGORY_FIRE,
                 mask: CATEGORY_DEFAULT | CATEGORY_PLATFORM | CATEGORY_MARIO | CATEGORY_BARREL
             }
