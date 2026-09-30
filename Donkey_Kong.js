@@ -14,6 +14,7 @@ let platforms = [];
 let ladders = [];
 let barrels = [];
 let fireballs = [];
+let hammers = [];
 
 // --- SISTEMA DE PUNTOS, VIDAS Y ESTADOS DE JUEGO ---
 let currentLevel = 1;
@@ -115,6 +116,12 @@ function setup() {
             const otherBody = isA ? bodyB : (isB ? bodyA : null);
 
             if (otherBody) {
+                if (otherBody.isHammer && mario.hammerTime === 0 && !mario.isClimbing) {
+                    mario.hammerTime = 8000;
+                    mario.jumpBarrels = null;
+                    World.remove(world, otherBody);
+                    hammers.splice(hammers.indexOf(otherBody), 1);
+                }
                 const landedOnTop = isA ? pair.collision.normal.y < -0.5 : pair.collision.normal.y > 0.5;
                 if (otherBody.isPlatform && landedOnTop && !mario.isClimbing) {
                     mario.groundContacts.add(otherBody);
@@ -192,6 +199,14 @@ function loadLevel(level) {
     ladders = [];
     barrels = [];
     fireballs = [];
+    hammers = [Bodies.rectangle(180, 585, 22, 26, {
+        isStatic: true, isSensor: true, isHammer: true,
+        collisionFilter: { group: 0, category: CATEGORY_DEFAULT, mask: CATEGORY_MARIO }
+    }), Bodies.rectangle(360, 247, 22, 26, {
+        isStatic: true, isSensor: true, isHammer: true,
+        collisionFilter: { group: 0, category: CATEGORY_DEFAULT, mask: CATEGORY_MARIO }
+    })];
+    World.add(world, hammers);
 
     mario = new Mario(60, 690, 24, 34);
 
@@ -261,6 +276,22 @@ function draw() {
     drawPauline();
 
     if (gameState === "PLAYING") {
+        mario.hammerTime = Math.max(0, mario.hammerTime - deltaTime);
+        if (mario.hammerTime > 0) {
+            const head = mario.hammerHead();
+            const bounds = { min: { x: head.x - 12, y: head.y - 8 },
+                max: { x: head.x + 12, y: head.y + 8 } };
+            for (const barrel of [...barrels]) {
+                if (Matter.Bounds.overlaps(bounds, barrel.body.bounds)) destroyBarrel(barrel.body, 300);
+            }
+            for (let i = fireballs.length - 1; i >= 0; i--) {
+                if (Matter.Bounds.overlaps(bounds, fireballs[i].body.bounds)) {
+                    fireballs[i].removeFromWorld();
+                    fireballs.splice(i, 1);
+                    score += 300;
+                }
+            }
+        }
         Engine.update(engine);
         if (gameState === "PLAYING") {
             mario.updateJumpScore();
@@ -286,6 +317,7 @@ function draw() {
     for (let fire of fireballs) fire.show();
     for (let platform of platforms) platform.show();
     for (let ladder of ladders) ladder.show();
+    for (const hammer of hammers) drawHammer(hammer.position.x, hammer.position.y);
     mario.show();
     drawOilDrum();
 
@@ -354,6 +386,17 @@ function drawOilDrum() {
     textSize(12);
     textAlign(CENTER, CENTER);
     text('OIL', 0, 2);
+    pop();
+}
+
+function drawHammer(x, y) {
+    push();
+    rectMode(CENTER);
+    noStroke();
+    fill(180, 110, 45);
+    rect(x, y + 12, 5, 24);
+    fill(220);
+    rect(x, y, 24, 16);
     pop();
 }
 

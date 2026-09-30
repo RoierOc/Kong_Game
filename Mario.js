@@ -8,6 +8,7 @@ class Mario {
         this.ladderContacts = new Set();
         this.isClimbing = false;
         this.jumpBarrels = null;
+        this.hammerTime = 0;
         this.facing = 1; // 1 = derecha, -1 = izquierda
 
         this.body = Bodies.rectangle(x, y, w, h, {
@@ -57,6 +58,7 @@ class Mario {
     }
 
     climb(direction) {
+        if (this.hammerTime > 0) return;
         if (!this.touchingLadder) return;
 
         if (!this.isClimbing) {
@@ -91,7 +93,7 @@ class Mario {
     }
 
     jump() {
-        if (this.isGrounded && !this.isClimbing) {
+        if (this.isGrounded && !this.isClimbing && this.hammerTime === 0) {
             this.jumpBarrels = new Map(barrels.map(barrel => [barrel, {
                 side: Math.sign(this.body.position.x - barrel.body.position.x), crossed: false
             }]));
@@ -123,6 +125,12 @@ class Mario {
         if (this.isGrounded) this.jumpBarrels = null;
     }
 
+    hammerHead() {
+        const overhead = Math.floor(engine.timing.timestamp / 200) % 2 === 1;
+        return { x: this.body.position.x + (overhead ? 0 : this.facing * 27),
+            y: this.body.position.y - (overhead ? 34 : 8) };
+    }
+
     show() {
         push();
         translate(this.body.position.x, this.body.position.y);
@@ -141,5 +149,9 @@ class Mario {
         }
 
         pop();
+        if (this.hammerTime > 0) {
+            const head = this.hammerHead();
+            drawHammer(head.x, head.y);
+        }
     }
 }
