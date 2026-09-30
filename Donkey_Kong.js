@@ -23,6 +23,8 @@ let score = 0;
 let lives = 3;
 let gameState = "START"; // "START", "PLAYING", "DYING", "WIN_LEVEL", "GAME_OVER", "GAME_CLEAR"
 let respawnAt = 0;
+let bonus = 5000;
+let bonusElapsed = 0;
 
 let goal;
 let oilDrum;
@@ -79,7 +81,7 @@ function setup() {
             // 2. CONDICIÓN DE VICTORIA (Mario llega al final de la última escalera)
             const isMarioGoal = (bodyA === mario.body && bodyB === goal) || (bodyB === mario.body && bodyA === goal);
             if (isMarioGoal && gameState === "PLAYING") {
-                score += 500; // Bonificación por superar el nivel
+                score += 500 + bonus; // Premio del nivel y tiempo restante
                 if (currentLevel < maxLevels) {
                     gameState = "WIN_LEVEL";
                 } else {
@@ -194,6 +196,8 @@ function loadLevel(level) {
     World.clear(world, false);
     Engine.clear(engine);
     lastBarrelTime = millis();
+    bonus = 5000;
+    bonusElapsed = 0;
     
     platforms = [];
     ladders = [];
@@ -276,6 +280,13 @@ function draw() {
     drawPauline();
 
     if (gameState === "PLAYING") {
+        bonusElapsed += deltaTime;
+        const ticks = Math.floor(bonusElapsed / 2000);
+        bonusElapsed %= 2000;
+        bonus = Math.max(0, bonus - ticks * 100);
+        if (bonus === 0) playerDied();
+    }
+    if (gameState === "PLAYING") {
         mario.hammerTime = Math.max(0, mario.hammerTime - deltaTime);
         if (mario.hammerTime > 0) {
             const head = mario.hammerHead();
@@ -331,6 +342,9 @@ function draw() {
     strokeWeight(3);
     text(`NIVEL: ${currentLevel}`, 20, 20);
     text(`PUNTOS: ${score}`, 180, 20);
+    textSize(16);
+    text(`BONO: ${bonus}`, 360, 80);
+    textSize(18);
     fill(255, 50, 50);
     text(`VIDAS: ${"♥ ".repeat(lives)}`, 380, 20);
     if (mario.hammerTime > 0) {
