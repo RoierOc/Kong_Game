@@ -29,13 +29,15 @@ let barrelInterval = 3200;
 
 let marioImg; 
 
-function preload() {
+function loadMarioImage() {
     // Carga aquí la ruta o URL de tu imagen o sprite
     // Puedes usar URLs directas o rutas locales (ej: 'assets/mario.png')
-    marioImg = loadImage('https://preview.redd.it/smb1-mario-in-his-donkey-kong-colors-v0-5m5hkqsvnqcf1.png?auto=webp&s=c4d31b7d3cfd90c35672ff596b136762ddaf8d55');
+    loadImage('https://preview.redd.it/smb1-mario-in-his-donkey-kong-colors-v0-5m5hkqsvnqcf1.png?auto=webp&s=c4d31b7d3cfd90c35672ff596b136762ddaf8d55',
+        loaded => { marioImg = loaded; }, () => { marioImg = null; });
 }
 function setup() {
     const canvas = createCanvas(540, 760);
+    loadMarioImage();
 
     engine = Engine.create();
     world = engine.world;
