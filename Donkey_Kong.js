@@ -21,7 +21,7 @@ let currentLevel = 1;
 const maxLevels = 3;
 let score = 0;
 let lives = 3;
-let gameState = "PLAYING"; // "PLAYING", "DYING", "WIN_LEVEL", "GAME_OVER", "GAME_CLEAR"
+let gameState = "START"; // "START", "PLAYING", "DYING", "WIN_LEVEL", "GAME_OVER", "GAME_CLEAR"
 let respawnAt = 0;
 
 let goal;
@@ -333,6 +333,11 @@ function draw() {
     text(`PUNTOS: ${score}`, 180, 20);
     fill(255, 50, 50);
     text(`VIDAS: ${"♥ ".repeat(lives)}`, 380, 20);
+    if (mario.hammerTime > 0) {
+        fill(255, 215, 0);
+        textSize(14);
+        text(`MARTILLO: ${Math.ceil(mario.hammerTime / 1000)} s`, 360, 55);
+    }
     pop();
 
     // Controles de Mario
@@ -356,6 +361,15 @@ function draw() {
         }
     } 
     // OVERLAYS / MENÚS DE ESTADO
+    else if (gameState === "START") {
+        showOverlay("DONKEY KONG", "Presiona ENTER para comenzar");
+        push();
+        fill(255);
+        textAlign(CENTER, CENTER);
+        textSize(16);
+        text("← → caminar · ↑ ↓ escaleras\nESPACIO saltar\nMartillo automático: sin salto ni escalada\nMeta: llegar a la princesa\nENTER avanzar · R reiniciar al terminar", width / 2, height / 2 + 130);
+        pop();
+    }
     else if (gameState === "WIN_LEVEL") {
         showOverlay(`¡NIVEL ${currentLevel} COMPLETADO!`, "Presiona ENTER para el siguiente nivel", `Puntaje actual: ${score}`);
     } 
@@ -455,6 +469,7 @@ function drawPauline() {
 
 function showOverlay(title, subtitle, extraInfo = "") {
     push();
+    rectMode(CORNER);
     fill(0, 0, 0, 200);
     rect(0, 0, width, height);
 
@@ -476,6 +491,11 @@ function showOverlay(title, subtitle, extraInfo = "") {
 }
 
 function keyPressed() {
+    if (keyCode === ENTER && gameState === "START") {
+        loadLevel(currentLevel);
+        gameState = "PLAYING";
+        return false;
+    }
     if (keyCode === 32 && gameState === "PLAYING") { // ESPACIO
         mario.jump();
     }
@@ -495,4 +515,5 @@ function keyPressed() {
         gameState = "PLAYING";
         loadLevel(currentLevel);
     }
+    if ([32, ENTER, LEFT_ARROW, RIGHT_ARROW, UP_ARROW, DOWN_ARROW].includes(keyCode)) return false;
 }
