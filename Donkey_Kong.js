@@ -33,7 +33,7 @@ let lastBarrelTime = 0;
 let barrelInterval = 3200;
 
 let marioImg; 
-let kongImg, princessImg;
+let kongImg, princessImg, oilImg;
 
 function loadMarioImage() {
     // Carga aquí la ruta o URL de tu imagen o sprite
@@ -46,6 +46,7 @@ function setup() {
     loadMarioImage();
     loadImage('assets/donkey-kong.png', img => { kongImg = img; }, () => { kongImg = null; });
     loadImage('assets/princess.png', img => { princessImg = img; }, () => { princessImg = null; });
+    loadImage('assets/oil.png', img => { oilImg = img; }, () => { oilImg = null; });
 
     engine = Engine.create();
     world = engine.world;
@@ -401,6 +402,13 @@ function draw() {
 function drawOilDrum() {
     push();
     translate(oilDrum.position.x, oilDrum.position.y);
+    if (oilImg) {
+        noSmooth();
+        imageMode(CENTER);
+        image(oilImg, 0, -13, 32, 62);
+        pop();
+        return;
+    }
     rectMode(CENTER);
     fill(35, 80, 160);
     stroke(120, 190, 255);
