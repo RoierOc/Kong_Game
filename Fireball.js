@@ -18,7 +18,7 @@ class Fireball {
         this.body.isFireball = true;
         World.add(world, this.body);
 
-        this.speed = 1.8;
+        this.speed = 1.8 + (currentLevel - 1) * 0.2;
         this.direction = random([1, -1]);
         
         Matter.Body.setVelocity(this.body, { x: this.direction * this.speed, y: -2 });

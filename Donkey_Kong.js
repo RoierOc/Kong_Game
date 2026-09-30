@@ -335,22 +335,22 @@ function draw() {
     // --- INTERFAZ DE USUARIO / HUD (PUNTOS Y VIDAS) ---
     push();
     fill(255);
-    textSize(18);
+    textSize(16);
     textFont('monospace');
     textAlign(LEFT, TOP);
     stroke(0);
     strokeWeight(3);
-    text(`NIVEL: ${currentLevel}`, 20, 20);
-    text(`PUNTOS: ${score}`, 180, 20);
+    text(`NIVEL: ${currentLevel}`, 12, 738);
+    text(`PUNTOS: ${score}`, 160, 738);
     textSize(16);
-    text(`BONO: ${bonus}`, 360, 80);
-    textSize(18);
+    text(`BONO: ${bonus}`, 360, 46);
+    textSize(16);
     fill(255, 50, 50);
-    text(`VIDAS: ${"♥ ".repeat(lives)}`, 380, 20);
+    text(`VIDAS: ${"♥ ".repeat(lives)}`, 380, 738);
     if (mario.hammerTime > 0) {
         fill(255, 215, 0);
         textSize(14);
-        text(`MARTILLO: ${Math.ceil(mario.hammerTime / 1000)} s`, 360, 55);
+        text(`MARTILLO: ${Math.ceil(mario.hammerTime / 1000)} s`, 360, 70);
     }
     pop();
 
@@ -358,10 +358,10 @@ function draw() {
     if (gameState === "PLAYING") {
         let isClimbingPressed = false;
 
-        if (keyIsDown(UP_ARROW) && mario.touchingLadder) {
+        if (keyIsDown(UP_ARROW) && mario.touchingLadder && mario.hammerTime === 0) {
             mario.climb(-1);
             isClimbingPressed = true;
-        } else if (keyIsDown(DOWN_ARROW) && mario.touchingLadder) {
+        } else if (keyIsDown(DOWN_ARROW) && mario.touchingLadder && mario.hammerTime === 0) {
             mario.climb(1);
             isClimbingPressed = true;
         }
