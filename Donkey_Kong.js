@@ -6,9 +6,9 @@ const CATEGORY_MARIO = 0x0008;     // Mario
 const CATEGORY_LADDER = 0x0010;    // Escaleras
 const CATEGORY_FIRE = 0x0020;      // Fuego
 
-const { Engine, World, Bodies, Mouse, MouseConstraint } = Matter;
+const { Engine, World, Bodies } = Matter;
 
-let engine, world, mc;
+let engine, world;
 let mario;
 let platforms = [];
 let ladders = [];
@@ -42,7 +42,7 @@ function loadMarioImage() {
         loaded => { marioImg = loaded; }, () => { marioImg = null; });
 }
 function setup() {
-    const canvas = createCanvas(540, 760);
+    createCanvas(540, 760);
     loadMarioImage();
     loadImage('assets/donkey-kong.png', img => { kongImg = img; }, () => { kongImg = null; });
     loadImage('assets/princess.png', img => { princessImg = img; }, () => { princessImg = null; });
@@ -50,12 +50,6 @@ function setup() {
 
     engine = Engine.create();
     world = engine.world;
-
-    const mouse = Mouse.create(canvas.elt);
-    mouse.pixelRatio = pixelDensity();
-
-    mc = MouseConstraint.create(engine, { mouse: mouse });
-    World.add(world, mc);
 
     // Inicializar primer nivel
     loadLevel(currentLevel);
