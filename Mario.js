@@ -7,6 +7,7 @@ class Mario {
         this.touchingLadder = false;
         this.ladderContacts = new Set();
         this.isClimbing = false;
+        this.jumpBarrels = null;
         this.facing = 1; // 1 = derecha, -1 = izquierda
 
         this.body = Bodies.rectangle(x, y, w, h, {
@@ -48,6 +49,7 @@ class Mario {
         this.body.isSensor = climbingState;
 
         if (climbingState) {
+            this.jumpBarrels = null;
             this.groundContacts.clear();
             this.isGrounded = false;
             Matter.Body.setVelocity(this.body, { x: 0, y: 0 });
@@ -90,6 +92,9 @@ class Mario {
 
     jump() {
         if (this.isGrounded && !this.isClimbing) {
+            this.jumpBarrels = new Map(barrels.map(barrel => [barrel, {
+                side: Math.sign(this.body.position.x - barrel.body.position.x), crossed: false
+            }]));
             Matter.Body.setVelocity(this.body, {
                 x: this.body.velocity.x,
                 y: -5.2
@@ -97,6 +102,25 @@ class Mario {
             this.isGrounded = false;
             this.groundContacts.clear();
         }
+    }
+
+    updateJumpScore() {
+        if (!this.jumpBarrels) return;
+        for (const [barrel, jump] of this.jumpBarrels) {
+            if (!barrels.includes(barrel) || barrel.jumpScored) continue;
+            const dx = this.body.position.x - barrel.body.position.x;
+            if (Math.abs(dx) <= this.w / 2 + barrel.r &&
+                this.body.bounds.max.y < barrel.body.bounds.min.y &&
+                barrel.body.bounds.min.y - this.body.bounds.max.y <= this.h &&
+                jump.side !== 0 && Math.sign(dx) === -jump.side) {
+                jump.crossed = true;
+            }
+            if (this.isGrounded && jump.crossed) {
+                barrel.jumpScored = true;
+                score += 100;
+            }
+        }
+        if (this.isGrounded) this.jumpBarrels = null;
     }
 
     show() {

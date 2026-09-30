@@ -1,6 +1,7 @@
 class Barrel {
     constructor(x, y, radius = 12) {
         this.r = radius;
+        this.jumpScored = false;
 
         this.body = Bodies.circle(x, y, this.r, {
             friction: 0.0,

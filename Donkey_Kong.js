@@ -276,6 +276,7 @@ function draw() {
     if (gameState === "PLAYING") {
         Engine.update(engine);
         if (gameState === "PLAYING") {
+            mario.updateJumpScore();
             for (let barrel of barrels) barrel.updateLadderFall();
             for (let fire of fireballs) fire.update();
         }
