@@ -30,6 +30,7 @@ let lastBarrelTime = 0;
 let barrelInterval = 3200;
 
 let marioImg; 
+let kongImg, princessImg;
 
 function loadMarioImage() {
     // Carga aquí la ruta o URL de tu imagen o sprite
@@ -40,6 +41,8 @@ function loadMarioImage() {
 function setup() {
     const canvas = createCanvas(540, 760);
     loadMarioImage();
+    loadImage('assets/donkey-kong.png', img => { kongImg = img; }, () => { kongImg = null; });
+    loadImage('assets/princess.png', img => { princessImg = img; }, () => { princessImg = null; });
 
     engine = Engine.create();
     world = engine.world;
@@ -255,23 +258,7 @@ function draw() {
         gameState = "PLAYING";
     }
 
-    // Pauline identifica el sensor de meta existente.
-    push();
-    fill(255, 105, 180);
-    noStroke();
-    rectMode(CENTER);
-    triangle(goal.position.x, goal.position.y - 8,
-        goal.position.x - 10, goal.position.y + 16,
-        goal.position.x + 10, goal.position.y + 16);
-    fill(255, 210, 170);
-    rect(goal.position.x, goal.position.y - 13, 10, 10);
-    fill(160, 70, 30);
-    rect(goal.position.x, goal.position.y - 20, 12, 5);
-    fill(255, 0, 80);
-    textAlign(CENTER, CENTER);
-    textSize(16);
-    text("♥", goal.position.x + 18, goal.position.y - 12);
-    pop();
+    drawPauline();
 
     if (gameState === "PLAYING") {
         Engine.update(engine);
@@ -373,6 +360,13 @@ function drawOilDrum() {
 function drawDonkeyKong() {
     push();
     translate(kong.x, kong.y);
+    if (kongImg) {
+        noSmooth();
+        imageMode(CENTER);
+        image(kongImg, 0, 0, 72, 54);
+        pop();
+        return;
+    }
     rectMode(CENTER);
     noStroke();
     fill(120, 65, 30);
@@ -388,6 +382,31 @@ function drawDonkeyKong() {
     rect(-6, -14, 4, 4);
     rect(6, -14, 4, 4);
     rect(0, -3, 14, 3);
+    pop();
+}
+
+function drawPauline() {
+    push();
+    imageMode(CENTER);
+    if (princessImg) {
+        noSmooth();
+        image(princessImg, goal.position.x, goal.position.y - 4, 24, 40);
+    } else {
+        noStroke();
+        fill(255, 105, 180);
+        triangle(goal.position.x, goal.position.y - 8,
+            goal.position.x - 10, goal.position.y + 16,
+            goal.position.x + 10, goal.position.y + 16);
+        fill(255, 210, 170);
+        rectMode(CENTER);
+        rect(goal.position.x, goal.position.y - 13, 10, 10);
+        fill(160, 70, 30);
+        rect(goal.position.x, goal.position.y - 20, 12, 5);
+    }
+    fill(255, 0, 80);
+    textAlign(CENTER, CENTER);
+    textSize(16);
+    text("♥", goal.position.x + 18, goal.position.y - 12);
     pop();
 }
 
