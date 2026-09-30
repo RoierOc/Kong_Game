@@ -115,6 +115,7 @@ function setup() {
                     mario.isGrounded = true;
                 }
                 if (otherBody.isLadder) {
+                    mario.ladderContacts.add(otherBody);
                     mario.touchingLadder = true;
                 }
                 if (otherBody.isBarrel || otherBody.isFireball) {
@@ -136,7 +137,10 @@ function setup() {
                     mario.groundContacts.delete(otherBody);
                     mario.isGrounded = mario.groundContacts.size > 0;
                 }
-                if (otherBody.isLadder) mario.touchingLadder = false;
+                if (otherBody.isLadder) {
+                    mario.ladderContacts.delete(otherBody);
+                    mario.touchingLadder = mario.ladderContacts.size > 0;
+                }
             }
         }
     });

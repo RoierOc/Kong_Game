@@ -5,6 +5,7 @@ class Mario {
         this.isGrounded = false;
         this.groundContacts = new Set();
         this.touchingLadder = false;
+        this.ladderContacts = new Set();
         this.isClimbing = false;
         this.facing = 1; // 1 = derecha, -1 = izquierda
 
@@ -70,6 +71,7 @@ class Mario {
     }
 
     stopClimbing() {
+        if (!this.touchingLadder) this.setClimbing(false);
         if (this.isClimbing) {
             Matter.Body.setVelocity(this.body, { x: 0, y: 0 });
         }
