@@ -30,16 +30,15 @@ class Fireball {
         
         if (Math.abs(currentVx) < 0.5) {
             this.direction *= -1;
-            Matter.Body.setVelocity(this.body, { 
-                x: this.direction * this.speed, 
-                y: this.body.velocity.y 
-            });
+        } else {
+            this.direction = Math.sign(currentVx);
         }
 
         // Cambio aleatorio de dirección ocasional
         if (random(1) < 0.005) {
             this.direction *= -1;
         }
+        Matter.Body.setVelocity(this.body, { x: this.direction * this.speed, y: this.body.velocity.y });
 
         // --- CHEQUEO DIRECTO DE DESTRUCCIÓN DE BARRILES POR PROXIMIDAD ---
         // (Garantiza la eliminación sin importar si el evento de Matter.js se retrasa)
