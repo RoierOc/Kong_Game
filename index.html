@@ -17,13 +17,20 @@
   <!-- OK, YOU CAN MAKE CHANGES BELOW THIS LINE AGAIN -->
 
   <style>
+    @font-face {
+      font-family: 'Press Start 2P';
+      src: url('assets/press-start-2p.woff2') format('woff2');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
     body {
       padding: 0;
       margin: 0;
       min-height: 100dvh;
       display: grid;
       place-items: center;
-      background: #08080e;
+      background: #000;
       color: #fff;
       font-family: monospace;
     }
@@ -37,41 +44,74 @@
     canvas { display: block; width: 100% !important; height: auto !important; }
     canvas:focus-visible { outline: 2px solid #69d5ff; outline-offset: -2px; }
     #game-menu {
-      position: absolute;
-      z-index: 1;
-      inset: 12% 7%;
-      padding: clamp(12px, 3vw, 24px);
+      position: fixed;
+      z-index: 2;
+      inset: 0;
+      box-sizing: border-box;
+      padding: clamp(12px, 2vh, 28px) clamp(12px, 3vw, 32px);
       overflow: auto;
-      background: #09090ef5;
-      border: 3px solid #d82850;
-      box-shadow: 0 0 0 5px #09090e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #000;
+      font-family: 'Press Start 2P', monospace;
       text-align: center;
     }
-    .title-art { display: flex; align-items: center; justify-content: center; gap: 8px; }
-    .title-art img { width: clamp(28px, 9cqw, 56px); flex-shrink: 0; image-rendering: pixelated; }
-    .title-art img:last-child { width: 24px; }
-    h1 { color: #ffd700; font-size: clamp(18px, 5cqw, 30px); min-width: 0; overflow-wrap: anywhere; line-height: 1.1; text-shadow: 3px 3px #a81a38; }
-    h2 { color: #69d5ff; font-size: 18px; }
-    #game-menu p, #game-menu dl { font-size: clamp(12px, 3vw, 16px); line-height: 1.6; }
-    button, select {
+    #game-menu img { image-rendering: pixelated; }
+    .title-art { flex-shrink: 0; width: 100%; display: grid; place-items: center; }
+    .menu-logo { display: none; width: min(90vw, 680px); max-width: 100%; }
+    .menu-scene { display: none; flex-shrink: 0; width: min(82vw, 940px); margin-top: 16px; align-items: flex-end; justify-content: space-between; }
+    .barrel-stack { display: flex; flex-direction: column; align-items: center; width: clamp(40px, 8.5vw, 106px); }
+    .barrel-stack img { width: 100%; }
+    .barrel-stack img:first-child { width: 55%; }
+    .menu-kong { width: clamp(100px, 22vw, 264px); }
+    #game-menu:has([data-panel="main"]:not([hidden])) .menu-logo,
+    #game-menu:has([data-panel="main"]:not([hidden])) .menu-scene { display: flex; }
+    #game-menu:has([data-panel="main"]:not([hidden])) #menu-title {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+    #menu-title { color: #ffa900; font-size: clamp(18px, 3vw, 32px); line-height: 1.5; overflow-wrap: anywhere; margin: 24px 0; }
+    [data-panel] { width: min(100%, 540px); font-size: clamp(10px, 1.6vw, 16px); margin-top: 20px; flex-shrink: 0; }
+    [data-panel="main"] { width: min(100%, 480px); margin-top: clamp(30px, 9vh, 80px); font-size: clamp(12px, 2.3vw, 28px); }
+    #game-menu p, #game-menu dl { line-height: 1.8; }
+    #game-menu button, #game-menu select {
       box-sizing: border-box;
       width: 100%;
-      padding: 12px;
       margin: 6px 0;
-      border: 1px solid #69d5ff;
-      background: #101321;
+      background: #000;
       color: #fff;
       font: inherit;
-      font-size: clamp(14px, 3vw, 18px);
+      line-height: 1.6;
     }
-    button { cursor: pointer; }
-    button:hover, button:focus-visible, select:focus-visible { color: #ffd700; outline: 2px solid #ffd700; outline-offset: 2px; }
-    button:disabled { opacity: .5; cursor: default; }
+    #game-menu button { position: relative; display: block; padding: 12px 0 12px clamp(50px, 7vw, 90px); border: 0; text-align: left; cursor: pointer; }
+    #game-menu button::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: clamp(40px, 6vw, 76px);
+      aspect-ratio: 95 / 52;
+      background: url('assets/menu-cursor.png') center / contain no-repeat;
+      image-rendering: pixelated;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    #game-menu button:hover, #game-menu button:focus { color: #ff2020; outline: none; }
+    #game-menu button:focus::before { visibility: visible; }
+    #game-menu select { padding: 10px; border: 1px solid #fff; }
+    #game-menu select:focus-visible { outline: 2px solid #ff2020; outline-offset: 2px; }
+    #game-menu button:disabled { opacity: .5; cursor: default; }
     label { display: block; margin-top: 16px; text-align: left; }
     dt { color: #ffd700; margin-top: 12px; }
     dd { margin: 0; }
-    .menu-hint { color: #a9b0c8; }
-    #pause-toggle { position: absolute; top: 8px; right: 8px; width: auto; padding: 6px 10px; margin: 0; font-size: 12px; }
+    #game-menu .menu-hint { color: #aaa; font-size: clamp(8px, 1.15vw, 12px); }
+    #pause-toggle { position: absolute; top: 8px; right: 8px; padding: 6px 10px; border: 1px solid #69d5ff; background: #000; color: #fff; font: 12px monospace; cursor: pointer; }
+    #pause-toggle:focus-visible { outline: 2px solid #ffd700; }
   </style>
 </head>
 
@@ -79,14 +119,24 @@
   <main id="game" aria-label="Donkey Kong">
     <section id="game-menu" role="dialog" aria-modal="true" aria-labelledby="menu-title">
       <div class="title-art">
-        <img src="assets/donkey-kong.png" alt="">
+        <img class="menu-logo" src="assets/menu-logo.png" alt="">
         <h1 id="menu-title">DONKEY KONG</h1>
-        <img src="assets/princess.png" alt="">
+      </div>
+      <div class="menu-scene" aria-hidden="true">
+        <div class="barrel-stack">
+          <img src="assets/oil.png" alt="">
+          <img src="assets/menu-barrel.png" alt="">
+          <img src="assets/menu-barrel.png" alt="">
+        </div>
+        <img class="menu-kong" src="assets/donkey-kong.png" alt="">
+        <div class="barrel-stack">
+          <img src="assets/oil.png" alt="">
+          <img src="assets/menu-barrel.png" alt="">
+          <img src="assets/menu-barrel.png" alt="">
+        </div>
       </div>
       <div data-panel="main">
-        <p>1 JUGADOR · 3 VIDAS</p>
-        <h2>RESCATA A LA PRINCESA</h2>
-        <button id="play" type="button">JUGAR</button>
+        <button id="play" type="button">NUEVO JUEGO</button>
         <button id="controls-open" type="button">CONTROLES</button>
         <button id="settings-open" type="button">CONFIGURACIÓN</button>
       </div>
@@ -126,7 +176,7 @@
         <button id="confirm-cancel" type="button">CANCELAR</button>
         <button id="confirm-accept" type="button">SÍ, CONTINUAR</button>
       </div>
-      <p class="menu-hint">↑ ↓ / TAB seleccionar · ENTER aceptar</p>
+      <p class="menu-hint">↑ ↓ / TAB elegir · ENTER aceptar</p>
     </section>
     <button id="pause-toggle" type="button" hidden aria-label="Pausar partida (Escape o P)">PAUSA · ESC</button>
   </main>
