@@ -236,17 +236,17 @@ function loadLevel(level) {
     platforms.push(new Platform(180, 80, 280, pHeight, -slope));
 
     // Escaleras
-    ladders.push(new Ladder(430, 655, 20, 110));
-    ladders.push(new Ladder(110, 545, 20, 110));
-    ladders.push(new Ladder(430, 435, 20, 110));
-    ladders.push(new Ladder(110, 325, 20, 110));
-    ladders.push(new Ladder(430, 215, 20, 110));
-    ladders.push(new Ladder(220, 110, 20, 120)); // Llega hasta la meta de Pauline
+    ladders.push(new Ladder(430, 20, platforms[1], platforms[0]));
+    ladders.push(new Ladder(110, 20, platforms[2], platforms[1]));
+    ladders.push(new Ladder(430, 20, platforms[3], platforms[2]));
+    ladders.push(new Ladder(110, 20, platforms[4], platforms[3]));
+    ladders.push(new Ladder(430, 20, platforms[5], platforms[4]));
+    ladders.push(new Ladder(220, 20, platforms[6], platforms[5]));
 
     // Escaleras parciales / trampas
-    ladders.push(new Ladder(270, 560, 20, 65));
-    ladders.push(new Ladder(270, 345, 20, 65));
-    ladders.push(new Ladder(300, 235, 20, 65));
+    ladders.push(new Ladder(270, 20, null, platforms[1]));
+    ladders.push(new Ladder(270, 20, null, platforms[3]));
+    ladders.push(new Ladder(300, 20, null, platforms[4]));
 
     // DIFICULTAD
     if (level === 1) {
@@ -297,6 +297,9 @@ function draw() {
                     score += 300;
                 }
             }
+        }
+        if (mario.isClimbing) {
+            mario.body.force.y -= mario.body.mass * world.gravity.y * world.gravity.scale;
         }
         Engine.update(engine);
         if (gameState === "PLAYING") {
@@ -354,11 +357,9 @@ function draw() {
         let isClimbingPressed = false;
 
         if (keyIsDown(UP_ARROW) && mario.touchingLadder && mario.hammerTime === 0) {
-            mario.climb(-1);
-            isClimbingPressed = true;
+            isClimbingPressed = mario.climb(-1);
         } else if (keyIsDown(DOWN_ARROW) && mario.touchingLadder && mario.hammerTime === 0) {
-            mario.climb(1);
-            isClimbingPressed = true;
+            isClimbingPressed = mario.climb(1);
         }
 
         if (!isClimbingPressed) {

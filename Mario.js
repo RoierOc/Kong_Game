@@ -7,6 +7,7 @@ class Mario {
         this.touchingLadder = false;
         this.ladderContacts = new Set();
         this.isClimbing = false;
+        this.climbingLadder = null;
         this.jumpBarrels = null;
         this.hammerTime = 0;
         this.facing = 1; // 1 = derecha, -1 = izquierda
@@ -30,13 +31,7 @@ class Mario {
     move(direction) {
         this.facing = direction; // Guardar hacia dónde mira
 
-        if (this.isClimbing) {
-            this.setClimbing(false);
-            Matter.Body.setPosition(this.body, {
-                x: this.body.position.x + (direction * 4),
-                y: this.body.position.y - 6
-            });
-        }
+        if (this.isClimbing) return;
 
         const speed = 3.5;
         Matter.Body.setVelocity(this.body, {
@@ -48,6 +43,7 @@ class Mario {
     setClimbing(climbingState) {
         this.isClimbing = climbingState;
         this.body.isSensor = climbingState;
+        if (!climbingState) this.climbingLadder = null;
 
         if (climbingState) {
             this.jumpBarrels = null;
@@ -58,20 +54,27 @@ class Mario {
     }
 
     climb(direction) {
-        if (this.hammerTime > 0) return;
-        if (!this.touchingLadder) return;
-
-        if (!this.isClimbing) {
-            this.setClimbing(true);
-        }
-
-        const climbSpeed = 3.0;
-        Matter.Body.setPosition(this.body, {
-            x: this.body.position.x,
-            y: this.body.position.y + (direction * climbSpeed)
-        });
-
+        if (this.hammerTime > 0) return false;
+        const ladder = this.climbingLadder || [...this.ladderContacts].map(body => body.ladder)
+            .find(l => Math.abs(this.body.position.x - l.body.position.x) < (l.w + this.w) / 2);
+        if (!ladder) return false;
+        const standingY = platform => platform.surfaceY(ladder.body.position.x) - this.h / 2
+            - Math.abs(Math.tan(platform.body.angle)) * this.w / 2 - 0.5;
+        const top = ladder.topPlatform ? standingY(ladder.topPlatform) : ladder.top + this.h / 2;
+        const bottom = standingY(ladder.bottomPlatform);
+        if (!this.isClimbing && ((direction < 0 && this.body.position.y <= top + 1)
+            || (direction > 0 && this.body.position.y >= bottom - 1))) return false;
+        this.setClimbing(true);
+        this.climbingLadder = ladder;
+        const y = Math.max(top, Math.min(bottom, this.body.position.y + direction * 3));
+        Matter.Body.setPosition(this.body, { x: ladder.body.position.x, y });
         Matter.Body.setVelocity(this.body, { x: 0, y: 0 });
+        if ((direction < 0 && y === top && ladder.topPlatform) || (direction > 0 && y === bottom)) {
+            this.setClimbing(false);
+            this.groundContacts.add((direction < 0 ? ladder.topPlatform : ladder.bottomPlatform).body);
+            this.isGrounded = true;
+        }
+        return true;
     }
 
     stopClimbing() {

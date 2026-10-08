@@ -19,6 +19,11 @@ constructor(x, y, w, h, angle = 0) {
         World.add(world, this.body);
     }
 
+    surfaceY(x) {
+        return this.body.position.y + Math.tan(this.body.angle) * (x - this.body.position.x)
+            - this.h / (2 * Math.cos(this.body.angle));
+    }
+
     show() {
         push();
         rectMode(CENTER);
