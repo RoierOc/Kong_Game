@@ -71,6 +71,7 @@
     dt { color: #ffd700; margin-top: 12px; }
     dd { margin: 0; }
     .menu-hint { color: #a9b0c8; }
+    #pause-toggle { position: absolute; top: 8px; right: 8px; width: auto; padding: 6px 10px; margin: 0; font-size: 12px; }
   </style>
 </head>
 
@@ -95,6 +96,7 @@
           <dt>↑ ↓</dt><dd>Subir y bajar escaleras</dd>
           <dt>ESPACIO</dt><dd>Saltar desde el suelo</dd>
           <dt>MARTILLO</dt><dd>Se recoge automáticamente.<br>No permite saltar ni escalar mientras dura.</dd>
+          <dt>ESC / P</dt><dd>Pausar o continuar</dd>
           <dt>ENTER / R</dt><dd>Avanzar de nivel / reiniciar al terminar</dd>
         </dl>
         <button id="controls-back" type="button">VOLVER</button>
@@ -111,8 +113,22 @@
         <p id="settings-status" role="status"></p>
         <button id="settings-back" type="button">VOLVER</button>
       </div>
+      <div data-panel="pause" hidden>
+        <p id="pause-info"></p>
+        <p class="menu-hint">El tiempo y los enemigos están detenidos.</p>
+        <button id="resume" type="button">CONTINUAR</button>
+        <button id="restart" type="button">REINICIAR PARTIDA</button>
+        <button id="home" type="button">VOLVER AL INICIO</button>
+      </div>
+      <div data-panel="confirm" hidden>
+        <p id="confirm-message"></p>
+        <p>Se perderán los puntos y el progreso de esta partida.</p>
+        <button id="confirm-cancel" type="button">CANCELAR</button>
+        <button id="confirm-accept" type="button">SÍ, CONTINUAR</button>
+      </div>
       <p class="menu-hint">↑ ↓ / TAB seleccionar · ENTER aceptar</p>
     </section>
+    <button id="pause-toggle" type="button" hidden aria-label="Pausar partida (Escape o P)">PAUSA · ESC</button>
   </main>
 </body>
 </html>

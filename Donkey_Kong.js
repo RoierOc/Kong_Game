@@ -21,13 +21,17 @@ let currentLevel = 1;
 const maxLevels = 3;
 let score = 0;
 let lives = 3;
-let gameState = "START"; // "START", "PLAYING", "DYING", "WIN_LEVEL", "GAME_OVER", "GAME_CLEAR"
+let gameState = "START"; // "START", "PLAYING", "PAUSED", "DYING", "WIN_LEVEL", "GAME_OVER", "GAME_CLEAR"
 let respawnAt = 0;
 let bonus = 5000;
 let bonusElapsed = 0;
 let difficulty = 1;
 let menu, gameCanvas;
 let menuPage = "main";
+let pausedAt = 0;
+let confirmAction = null;
+let waitForControlsRelease = false;
+let skipNextTick = false;
 
 let goal;
 let oilDrum;
@@ -275,23 +279,27 @@ function loadLevel(level) {
 
 function draw() {
     background(10, 10, 15);
+    let playedTime = skipNextTick ? 0 : deltaTime;
+    if (gameState === "PLAYING") skipNextTick = false;
     drawDonkeyKong();
     if (gameState === "DYING" && millis() >= respawnAt) {
         loadLevel(currentLevel);
         gameState = "PLAYING";
+        playedTime = 0;
+        if (document.hidden) pauseGame();
     }
 
     drawPauline();
 
     if (gameState === "PLAYING") {
-        bonusElapsed += deltaTime;
+        bonusElapsed += playedTime;
         const ticks = Math.floor(bonusElapsed / 2000);
         bonusElapsed %= 2000;
         bonus = Math.max(0, bonus - ticks * 100);
         if (bonus === 0) playerDied();
     }
     if (gameState === "PLAYING") {
-        mario.hammerTime = Math.max(0, mario.hammerTime - deltaTime);
+        mario.hammerTime = Math.max(0, mario.hammerTime - playedTime);
         if (mario.hammerTime > 0) {
             const head = mario.hammerHead();
             const bounds = { min: { x: head.x - 12, y: head.y - 8 },
@@ -362,7 +370,11 @@ function draw() {
     pop();
 
     // Controles de Mario
-    if (gameState === "PLAYING") {
+    if (waitForControlsRelease && ![32, LEFT_ARROW, RIGHT_ARROW, UP_ARROW, DOWN_ARROW].some(code => keyIsDown(code))) {
+        waitForControlsRelease = false;
+    }
+    document.getElementById('pause-toggle').hidden = gameState !== "PLAYING";
+    if (gameState === "PLAYING" && !waitForControlsRelease) {
         let isClimbingPressed = false;
 
         if (keyIsDown(UP_ARROW) && mario.touchingLadder && mario.hammerTime === 0) {
@@ -514,6 +526,14 @@ function setupMenu() {
     document.getElementById('settings-open').onclick = () => showMenu('settings');
     document.getElementById('controls-back').onclick = () => showMenu('main');
     document.getElementById('settings-back').onclick = () => showMenu('main');
+    document.getElementById('pause-toggle').onclick = pauseGame;
+    document.getElementById('resume').onclick = resumeGame;
+    document.getElementById('restart').onclick = () => requestMenuAction('restart');
+    document.getElementById('home').onclick = () => requestMenuAction('home');
+    document.getElementById('confirm-cancel').onclick = () => { confirmAction = null; showMenu('pause'); };
+    document.getElementById('confirm-accept').onclick = confirmMenuAction;
+    window.addEventListener('blur', pauseGame);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
     const fullscreen = document.getElementById('fullscreen');
     fullscreen.disabled = !document.fullscreenEnabled;
     fullscreen.onclick = toggleFullscreen;
@@ -523,8 +543,13 @@ function setupMenu() {
     });
     menu.addEventListener('keydown', event => {
         if (event.key === 'Escape') {
-            showMenu('main');
             event.preventDefault();
+            event.stopPropagation();
+            if (event.repeat) return;
+            if (gameState === "PAUSED") {
+                if (menuPage === 'confirm') { confirmAction = null; showMenu('pause'); }
+                else resumeGame();
+            } else showMenu('main');
         }
         if (!['ArrowUp', 'ArrowDown', 'Tab'].includes(event.key)) return;
         if (event.target.tagName === 'SELECT' && event.key !== 'Tab') return;
@@ -542,8 +567,11 @@ function showMenu(page) {
     menu.hidden = false;
     gameCanvas.setAttribute('tabindex', '-1');
     for (const panel of menu.querySelectorAll('[data-panel]')) panel.hidden = panel.dataset.panel !== page;
-    document.getElementById('menu-title').textContent = page === 'main' ? 'DONKEY KONG' : page === 'controls' ? 'CONTROLES' : 'CONFIGURACIÓN';
-    document.getElementById(page === 'main' ? 'play' : page === 'controls' ? 'controls-back' : 'difficulty').focus();
+    const titles = { main: 'DONKEY KONG', controls: 'CONTROLES', settings: 'CONFIGURACIÓN', pause: 'PAUSA', confirm: 'CONFIRMAR' };
+    const first = { main: 'play', controls: 'controls-back', settings: 'difficulty', pause: 'resume', confirm: 'confirm-cancel' };
+    document.getElementById('menu-title').textContent = titles[page];
+    if (page === 'pause') document.getElementById('pause-info').textContent = `NIVEL ${currentLevel} · PUNTOS ${score} · VIDAS ${lives}`;
+    document.getElementById(first[page]).focus();
 }
 
 async function toggleFullscreen() {
@@ -565,21 +593,71 @@ function startGame() {
     score = 0;
     loadLevel(currentLevel);
     gameState = "PLAYING";
+    confirmAction = null;
+    skipNextTick = false;
+    waitForControlsRelease = true;
     menu.hidden = true;
     gameCanvas.setAttribute('tabindex', '0');
     gameCanvas.focus();
 }
 
-function keyPressed() {
+function pauseGame() {
+    if (gameState !== "PLAYING") return;
+    pausedAt = millis();
+    gameState = "PAUSED";
+    showMenu('pause');
+}
+
+function resumeGame() {
+    if (gameState !== "PAUSED") return;
+    lastBarrelTime += millis() - pausedAt;
+    gameState = "PLAYING";
+    confirmAction = null;
+    waitForControlsRelease = true;
+    skipNextTick = true;
+    Matter.Body.setVelocity(mario.body, { x: 0, y: mario.body.velocity.y });
+    menu.hidden = true;
+    gameCanvas.setAttribute('tabindex', '0');
+    gameCanvas.focus();
+}
+
+function requestMenuAction(action) {
+    if (gameState !== "PAUSED") return;
+    confirmAction = action;
+    document.getElementById('confirm-message').textContent = action === 'restart' ? '¿Reiniciar desde el nivel 1?' : '¿Volver al menú de inicio?';
+    showMenu('confirm');
+}
+
+function confirmMenuAction() {
+    if (gameState !== "PAUSED" || !confirmAction) return;
+    const action = confirmAction;
+    startGame();
+    if (action === 'home') {
+        gameState = "START";
+        showMenu('main');
+    }
+}
+
+function keyPressed(event) {
+    if ((keyCode === 27 || key === 'p' || key === 'P') && ['PLAYING', 'PAUSED'].includes(gameState)) {
+        if (event && event.repeat) return false;
+        if (gameState === "PLAYING") pauseGame();
+        else if (menuPage === 'confirm') { confirmAction = null; showMenu('pause'); }
+        else resumeGame();
+        return false;
+    }
+    if (document.activeElement.tagName === 'BUTTON') {
+        if (keyCode === ENTER) { document.activeElement.click(); return false; }
+        if (keyCode === 32) return;
+    }
     if (gameState === "START") {
         if (keyCode === ENTER && document.activeElement.tagName !== 'SELECT') {
-            if (document.activeElement.tagName === 'BUTTON') document.activeElement.click();
-            else if (menuPage === 'main') startGame();
+            if (menuPage === 'main') startGame();
             return false;
         }
         return;
     }
-    if (keyCode === 32 && gameState === "PLAYING") { // ESPACIO
+    if (keyCode === 32 && gameState === "PLAYING" && !waitForControlsRelease) { // ESPACIO
         mario.jump();
     }
 
