@@ -43,6 +43,12 @@ class Mario {
     setClimbing(climbingState) {
         this.isClimbing = climbingState;
         this.body.isSensor = climbingState;
+        // Matter guarda isSensor en cada contacto; cambiar solo el cuerpo no lo actualiza.
+        for (const pair of engine.pairs.list) {
+            if (pair.bodyA === this.body || pair.bodyB === this.body) {
+                pair.isSensor = pair.bodyA.isSensor || pair.bodyB.isSensor;
+            }
+        }
         if (!climbingState) this.climbingLadder = null;
 
         if (climbingState) {
