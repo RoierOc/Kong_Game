@@ -25,7 +25,7 @@ class Barrel {
         World.add(world, this.body);
 
         // Impulso inicial a la derecha
-        Matter.Body.setVelocity(this.body, { x: 2.5 + (currentLevel - 1) * 0.2, y: 0 });
+        Matter.Body.setVelocity(this.body, { x: (2.5 + (currentLevel - 1) * 0.2) * difficulty, y: 0 });
     }
 
 updateLadderFall() {
@@ -39,7 +39,7 @@ updateLadderFall() {
 
             // 2. Determinar la dirección según la altura de la pantalla (Zigzag)
             // Si está en viga par o impar, le damos un empuje inicial para que empiece a rodar
-            const speed = 2.0 + (currentLevel - 1) * 0.2;
+            const speed = (2.0 + (currentLevel - 1) * 0.2) * difficulty;
             let direction = (Math.floor(this.body.position.y / 100) % 2 === 0) ? -speed : speed;
 
             Matter.Body.setVelocity(this.body, { 

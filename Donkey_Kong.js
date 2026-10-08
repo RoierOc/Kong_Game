@@ -25,6 +25,9 @@ let gameState = "START"; // "START", "PLAYING", "DYING", "WIN_LEVEL", "GAME_OVER
 let respawnAt = 0;
 let bonus = 5000;
 let bonusElapsed = 0;
+let difficulty = 1;
+let menu, gameCanvas;
+let menuPage = "main";
 
 let goal;
 let oilDrum;
@@ -42,7 +45,12 @@ function loadMarioImage() {
         loaded => { marioImg = loaded; }, () => { marioImg = null; });
 }
 function setup() {
-    createCanvas(540, 760);
+    const canvas = createCanvas(540, 760);
+    canvas.parent('game');
+    gameCanvas = canvas.elt;
+    gameCanvas.setAttribute('tabindex', '-1');
+    gameCanvas.setAttribute('aria-label', 'Tablero: flechas para moverse y espacio para saltar');
+    setupMenu();
     loadMarioImage();
     loadImage('assets/donkey-kong.png', img => { kongImg = img; }, () => { kongImg = null; });
     loadImage('assets/princess.png', img => { princessImg = img; }, () => { princessImg = null; });
@@ -262,6 +270,7 @@ function loadLevel(level) {
         fireballs.push(new Fireball(380, 380, 10));
         fireballs.push(new Fireball(200, 270, 10));
     }
+    barrelInterval /= difficulty;
 }
 
 function draw() {
@@ -371,15 +380,6 @@ function draw() {
         }
     } 
     // OVERLAYS / MENÚS DE ESTADO
-    else if (gameState === "START") {
-        showOverlay("DONKEY KONG", "Presiona ENTER para comenzar");
-        push();
-        fill(255);
-        textAlign(CENTER, CENTER);
-        textSize(16);
-        text("← → caminar · ↑ ↓ escaleras\nESPACIO saltar\nMartillo automático: sin salto ni escalada\nMeta: llegar a la princesa\nENTER avanzar · R reiniciar al terminar", width / 2, height / 2 + 130);
-        pop();
-    }
     else if (gameState === "WIN_LEVEL") {
         showOverlay(`¡NIVEL ${currentLevel} COMPLETADO!`, "Presiona ENTER para el siguiente nivel", `Puntaje actual: ${score}`);
     } 
@@ -507,11 +507,77 @@ function showOverlay(title, subtitle, extraInfo = "") {
     pop();
 }
 
+function setupMenu() {
+    menu = document.getElementById('game-menu');
+    document.getElementById('play').onclick = startGame;
+    document.getElementById('controls-open').onclick = () => showMenu('controls');
+    document.getElementById('settings-open').onclick = () => showMenu('settings');
+    document.getElementById('controls-back').onclick = () => showMenu('main');
+    document.getElementById('settings-back').onclick = () => showMenu('main');
+    const fullscreen = document.getElementById('fullscreen');
+    fullscreen.disabled = !document.fullscreenEnabled;
+    fullscreen.onclick = toggleFullscreen;
+    if (fullscreen.disabled) document.getElementById('settings-status').textContent = 'Pantalla completa no disponible en este navegador.';
+    document.addEventListener('fullscreenchange', () => {
+        fullscreen.textContent = document.fullscreenElement ? 'SALIR DE PANTALLA COMPLETA' : 'PANTALLA COMPLETA';
+    });
+    menu.addEventListener('keydown', event => {
+        if (event.key === 'Escape') {
+            showMenu('main');
+            event.preventDefault();
+        }
+        if (!['ArrowUp', 'ArrowDown', 'Tab'].includes(event.key)) return;
+        if (event.target.tagName === 'SELECT' && event.key !== 'Tab') return;
+        const items = [...menu.querySelector(`[data-panel="${menuPage}"]`).querySelectorAll('button:not(:disabled), select')];
+        const direction = event.key === 'ArrowUp' || event.shiftKey ? -1 : 1;
+        const next = (items.indexOf(document.activeElement) + direction + items.length) % items.length;
+        items[next].focus();
+        event.preventDefault();
+    });
+    showMenu('main');
+}
+
+function showMenu(page) {
+    menuPage = page;
+    menu.hidden = false;
+    gameCanvas.setAttribute('tabindex', '-1');
+    for (const panel of menu.querySelectorAll('[data-panel]')) panel.hidden = panel.dataset.panel !== page;
+    document.getElementById('menu-title').textContent = page === 'main' ? 'DONKEY KONG' : page === 'controls' ? 'CONTROLES' : 'CONFIGURACIÓN';
+    document.getElementById(page === 'main' ? 'play' : page === 'controls' ? 'controls-back' : 'difficulty').focus();
+}
+
+async function toggleFullscreen() {
+    const status = document.getElementById('settings-status');
+    try {
+        if (document.fullscreenElement) await document.exitFullscreen();
+        else await document.documentElement.requestFullscreen();
+        status.textContent = '';
+    } catch {
+        status.textContent = 'No se pudo cambiar la pantalla completa. Inténtalo de nuevo.';
+    }
+}
+
+function startGame() {
+    const selected = Number(document.getElementById('difficulty').value);
+    difficulty = [0.8, 1, 1.2].includes(selected) ? selected : 1;
+    currentLevel = 1;
+    lives = 3;
+    score = 0;
+    loadLevel(currentLevel);
+    gameState = "PLAYING";
+    menu.hidden = true;
+    gameCanvas.setAttribute('tabindex', '0');
+    gameCanvas.focus();
+}
+
 function keyPressed() {
-    if (keyCode === ENTER && gameState === "START") {
-        loadLevel(currentLevel);
-        gameState = "PLAYING";
-        return false;
+    if (gameState === "START") {
+        if (keyCode === ENTER && document.activeElement.tagName !== 'SELECT') {
+            if (document.activeElement.tagName === 'BUTTON') document.activeElement.click();
+            else if (menuPage === 'main') startGame();
+            return false;
+        }
+        return;
     }
     if (keyCode === 32 && gameState === "PLAYING") { // ESPACIO
         mario.jump();
@@ -526,11 +592,7 @@ function keyPressed() {
 
     // Reiniciar desde el Nivel 1 si pierdes todas las vidas o completas el juego
     if ((key === 'r' || key === 'R') && (gameState === "GAME_OVER" || gameState === "GAME_CLEAR")) {
-        currentLevel = 1;
-        lives = 3;
-        score = 0;
-        gameState = "PLAYING";
-        loadLevel(currentLevel);
+        startGame();
     }
     if ([32, ENTER, LEFT_ARROW, RIGHT_ARROW, UP_ARROW, DOWN_ARROW].includes(keyCode)) return false;
 }

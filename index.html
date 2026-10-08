@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Donkey Kong — Arcade universitario</title>
 
   <!-- PLEASE NO CHANGES BELOW THIS LINE (UNTIL I SAY SO) -->
   <script language="javascript" type="text/javascript" src="libraries/p5.min.js"></script>
@@ -19,10 +20,99 @@
     body {
       padding: 0;
       margin: 0;
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      background: #08080e;
+      color: #fff;
+      font-family: monospace;
     }
+    [hidden] { display: none !important; }
+    #game {
+      position: relative;
+      container-type: inline-size;
+      width: min(540px, 100vw, calc(100dvh * 540 / 760));
+      aspect-ratio: 540 / 760;
+    }
+    canvas { display: block; width: 100% !important; height: auto !important; }
+    canvas:focus-visible { outline: 2px solid #69d5ff; outline-offset: -2px; }
+    #game-menu {
+      position: absolute;
+      z-index: 1;
+      inset: 12% 7%;
+      padding: clamp(12px, 3vw, 24px);
+      overflow: auto;
+      background: #09090ef5;
+      border: 3px solid #d82850;
+      box-shadow: 0 0 0 5px #09090e;
+      text-align: center;
+    }
+    .title-art { display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .title-art img { width: clamp(28px, 9cqw, 56px); flex-shrink: 0; image-rendering: pixelated; }
+    .title-art img:last-child { width: 24px; }
+    h1 { color: #ffd700; font-size: clamp(18px, 5cqw, 30px); min-width: 0; overflow-wrap: anywhere; line-height: 1.1; text-shadow: 3px 3px #a81a38; }
+    h2 { color: #69d5ff; font-size: 18px; }
+    #game-menu p, #game-menu dl { font-size: clamp(12px, 3vw, 16px); line-height: 1.6; }
+    button, select {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 12px;
+      margin: 6px 0;
+      border: 1px solid #69d5ff;
+      background: #101321;
+      color: #fff;
+      font: inherit;
+      font-size: clamp(14px, 3vw, 18px);
+    }
+    button { cursor: pointer; }
+    button:hover, button:focus-visible, select:focus-visible { color: #ffd700; outline: 2px solid #ffd700; outline-offset: 2px; }
+    button:disabled { opacity: .5; cursor: default; }
+    label { display: block; margin-top: 16px; text-align: left; }
+    dt { color: #ffd700; margin-top: 12px; }
+    dd { margin: 0; }
+    .menu-hint { color: #a9b0c8; }
   </style>
 </head>
 
 <body>
+  <main id="game" aria-label="Donkey Kong">
+    <section id="game-menu" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+      <div class="title-art">
+        <img src="assets/donkey-kong.png" alt="">
+        <h1 id="menu-title">DONKEY KONG</h1>
+        <img src="assets/princess.png" alt="">
+      </div>
+      <div data-panel="main">
+        <p>1 JUGADOR · 3 VIDAS</p>
+        <h2>RESCATA A LA PRINCESA</h2>
+        <button id="play" type="button">JUGAR</button>
+        <button id="controls-open" type="button">CONTROLES</button>
+        <button id="settings-open" type="button">CONFIGURACIÓN</button>
+      </div>
+      <div data-panel="controls" hidden>
+        <dl>
+          <dt>← →</dt><dd>Caminar</dd>
+          <dt>↑ ↓</dt><dd>Subir y bajar escaleras</dd>
+          <dt>ESPACIO</dt><dd>Saltar desde el suelo</dd>
+          <dt>MARTILLO</dt><dd>Se recoge automáticamente.<br>No permite saltar ni escalar mientras dura.</dd>
+          <dt>ENTER / R</dt><dd>Avanzar de nivel / reiniciar al terminar</dd>
+        </dl>
+        <button id="controls-back" type="button">VOLVER</button>
+      </div>
+      <div data-panel="settings" hidden>
+        <label for="difficulty">DIFICULTAD</label>
+        <select id="difficulty">
+          <option value="0.8">FÁCIL</option>
+          <option value="1" selected>NORMAL</option>
+          <option value="1.2">DIFÍCIL</option>
+        </select>
+        <p class="menu-hint">Cambia la velocidad de los enemigos y la frecuencia de los barriles. Se aplica al comenzar.</p>
+        <button id="fullscreen" type="button">PANTALLA COMPLETA</button>
+        <p id="settings-status" role="status"></p>
+        <button id="settings-back" type="button">VOLVER</button>
+      </div>
+      <p class="menu-hint">↑ ↓ / TAB seleccionar · ENTER aceptar</p>
+    </section>
+  </main>
 </body>
 </html>
