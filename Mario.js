@@ -1,7 +1,7 @@
 class Mario {
     constructor(x, y, w, h) {
-        this.w = w; 
-        this.h = h;
+        this.w = w; // Ancho de la hitbox (28)
+        this.h = h; // Alto de la hitbox (38)
         this.isGrounded = false;
         this.groundContacts = new Set();
         this.touchingLadder = false;
@@ -170,9 +170,10 @@ class Mario {
                 offsetY = -30; 
                 let hammerFrames = [5, 6]; 
                 col = hammerFrames[Math.floor(millis() / 200) % hammerFrames.length];
+                offsetY = (col === 6) ? -18 : -30;
             } else if (this.isClimbing) {
                 row = 1; // Fila de escaleras
-                col = Math.floor(millis()) % 2;
+                col = Math.floor(millis()/ 200) % 2;
             } else if (!this.isGrounded) {
                 row = 0;
                 col = 6; // Frame de salto
@@ -182,7 +183,7 @@ class Mario {
                 col = runFrames[Math.floor(millis() / 100) % runFrames.length];
             } else {
                 row = 0;
-                col = 4; // Frame estático (Idle)
+                col = 4;
             }
 
             let sx = col * cellW;
