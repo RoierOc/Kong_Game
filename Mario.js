@@ -1,6 +1,6 @@
 class Mario {
     constructor(x, y, w, h) {
-        this.w = w;
+        this.w = w; 
         this.h = h;
         this.isGrounded = false;
         this.groundContacts = new Set();
@@ -28,7 +28,7 @@ class Mario {
     }
 
     move(direction) {
-        this.facing = direction; // Guardar hacia dónde mira
+        this.facing = direction;
 
         if (this.isClimbing) {
             this.setClimbing(false);
@@ -48,6 +48,14 @@ class Mario {
     setClimbing(climbingState) {
         this.isClimbing = climbingState;
         this.body.isSensor = climbingState;
+
+        if (!climbingState) {
+            // Empuje hacia arriba al salir de la escalera para evitar atravesar el suelo
+            Matter.Body.setPosition(this.body, {
+                x: this.body.position.x,
+                y: this.body.position.y - 4
+            });
+        }
 
         if (climbingState) {
             this.jumpBarrels = null;
@@ -127,21 +135,60 @@ class Mario {
 
     hammerHead() {
         const overhead = Math.floor(engine.timing.timestamp / 200) % 2 === 1;
-        return { x: this.body.position.x + (overhead ? 0 : this.facing * 27),
-            y: this.body.position.y - (overhead ? 34 : 8) };
+        return { 
+            x: this.body.position.x + (overhead ? 0 : this.facing * 27),
+            y: this.body.position.y - (overhead ? 34 : 8) 
+        };
     }
 
     show() {
         push();
         translate(this.body.position.x, this.body.position.y);
         imageMode(CENTER);
-
-        // Voltear horizontalmente si camina a la izquierda
         scale(this.facing, 1);
 
-        // Si la imagen ya cargó, dibujamos el sprite. Si no, muestra el rectángulo base.
         if (marioImg) {
-            image(marioImg, 0, 0, this.w + 6, this.h + 6);
+            noSmooth(); // Mantiene el pixel art nítido
+
+            // Definir matriz exacta de la imagen suministrada (8 columnas x 4 filas)
+            let cols = 8;
+            let rows = 4;
+            let cellW = marioImg.width / cols;
+            let cellH = marioImg.height / rows;
+
+            let col = 0;
+            let row = 0;
+            let offsetY = 20;
+
+            // Seleccionar frame exacto según el estado físico
+            if (gameState === "DYING") {
+                row = 3; // Fila inferior de colapso/muerte
+                offsetY = -30;
+                col = Math.floor(millis() / 250) % 4;
+            } else if (this.hammerTime > 0) {
+                row = 2; // Fila de martillo
+                offsetY = -30; 
+                let hammerFrames = [5, 6]; 
+                col = hammerFrames[Math.floor(millis() / 200) % hammerFrames.length];
+            } else if (this.isClimbing) {
+                row = 1; // Fila de escaleras
+                col = Math.floor(millis()) % 2;
+            } else if (!this.isGrounded) {
+                row = 0;
+                col = 6; // Frame de salto
+            } else if (Math.abs(this.body.velocity.x) > 0.5) {
+                row = 0; // Fila superior de movimiento
+                let runFrames = [4, 5, 6];
+                col = runFrames[Math.floor(millis() / 100) % runFrames.length];
+            } else {
+                row = 0;
+                col = 4; // Frame estático (Idle)
+            }
+
+            let sx = col * cellW;
+            let sy = row * cellH;
+            image(marioImg, 0, offsetY, 52, 90, sx, sy, cellW, cellH);
+
         } else {
             rectMode(CENTER);
             fill(225, 40, 40);
@@ -149,9 +196,5 @@ class Mario {
         }
 
         pop();
-        if (this.hammerTime > 0) {
-            const head = this.hammerHead();
-            drawHammer(head.x, head.y);
-        }
     }
 }
