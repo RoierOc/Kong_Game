@@ -35,15 +35,15 @@ let barrelInterval = 3200;
 let marioImg; 
 let kongImg, princessImg, oilImg;
 
-function loadMarioImage() {
+//function loadMarioImage() {
     // Carga aquí la ruta o URL de tu imagen o sprite
     // Puedes usar URLs directas o rutas locales (ej: 'assets/mario.png')
-    loadImage('https://preview.redd.it/smb1-mario-in-his-donkey-kong-colors-v0-5m5hkqsvnqcf1.png?auto=webp&s=c4d31b7d3cfd90c35672ff596b136762ddaf8d55',
-        loaded => { marioImg = loaded; }, () => { marioImg = null; });
-}
+//    loadImage('assets/mario.png',
+//        loaded => { marioImg = loaded; }, () => { marioImg = null; });
+//}
 function setup() {
     createCanvas(540, 760);
-    loadMarioImage();
+    loadImage('assets/mario.png',loaded => { marioImg = loaded; }, () => { marioImg = null; });
     loadImage('assets/donkey-kong.png', img => { kongImg = img; }, () => { kongImg = null; });
     loadImage('assets/princess.png', img => { princessImg = img; }, () => { princessImg = null; });
     loadImage('assets/oil.png', img => { oilImg = img; }, () => { oilImg = null; });
@@ -175,10 +175,10 @@ function consumeBarrelAtOilDrum(body) {
 
 function playerDied() {
     if (gameState !== "PLAYING") return;
+    gameState = "DYING";
     lives--;
     if (lives > 0) {
         // Reaparecer al inicio del nivel actual
-        gameState = "DYING";
         respawnAt = millis() + 500;
     } else {
         // Te quedaste sin vidas -> Game Over
@@ -267,9 +267,14 @@ function loadLevel(level) {
 function draw() {
     background(10, 10, 15);
     drawDonkeyKong();
+    drawDonkeyKong();
     if (gameState === "DYING" && millis() >= respawnAt) {
-        loadLevel(currentLevel);
-        gameState = "PLAYING";
+        if (lives > 0) {
+            loadLevel(currentLevel);
+            gameState = "PLAYING";
+        } else {
+            gameState = "GAME_OVER";
+        }
     }
 
     drawPauline();
