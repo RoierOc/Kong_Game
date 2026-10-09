@@ -51,7 +51,6 @@ function preload() {
     }, () => { spriteSheet = null; });
     
     princessImg = loadImage('assets/princess.png', img => { princessImg = img; }, () => { princessImg = null; });
-    oilImg = loadImage('assets/oil.png', img => { oilImg = img; }, () => { oilImg = null; });
 }
 
 function setup() {
