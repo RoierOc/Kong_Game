@@ -24,7 +24,7 @@ class Barrel {
         World.add(world, this.body);
 
         // Impulso inicial a la derecha
-        Matter.Body.setVelocity(this.body, { x: 2.5 + (currentLevel - 1) * 0.2, y: 0 });
+        Matter.Body.setVelocity(this.body, { x: (2.5 + (currentLevel - 1) * 0.2) * difficulty, y: 0 });
     }
 
     updateLadderFall() {
@@ -33,7 +33,7 @@ class Barrel {
                 this.isFallingLadder = false;
                 this.body.collisionFilter.mask = CATEGORY_DEFAULT | CATEGORY_PLATFORM | CATEGORY_MARIO | CATEGORY_LADDER | CATEGORY_FIRE;
 
-                const speed = 2.0 + (currentLevel - 1) * 0.2;
+                const speed = (2.0 + (currentLevel - 1) * 0.2) * difficulty;
                 let direction = (Math.floor(this.body.position.y / 100) % 2 === 0) ? -speed : speed;
 
                 Matter.Body.setVelocity(this.body, { 
