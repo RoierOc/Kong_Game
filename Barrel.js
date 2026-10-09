@@ -12,7 +12,6 @@ class Barrel {
             collisionFilter: {
                 group: 0,
                 category: CATEGORY_BARREL,
-                // Al nacer, colisiona con todo (Plataformas, Mario, Fondo)
                 mask: CATEGORY_DEFAULT | CATEGORY_PLATFORM | CATEGORY_MARIO | CATEGORY_LADDER | CATEGORY_FIRE
             }
         });
@@ -28,27 +27,22 @@ class Barrel {
         Matter.Body.setVelocity(this.body, { x: 2.5 + (currentLevel - 1) * 0.2, y: 0 });
     }
 
-updateLadderFall() {
-    if (this.isFallingLadder) {
-        // En cuanto el barril llega al nivel del piso inferior:
-        if (this.body.position.y >= this.ladderYTarget) {
-            this.isFallingLadder = false;
+    updateLadderFall() {
+        if (this.isFallingLadder) {
+            if (this.body.position.y >= this.ladderYTarget) {
+                this.isFallingLadder = false;
+                this.body.collisionFilter.mask = CATEGORY_DEFAULT | CATEGORY_PLATFORM | CATEGORY_MARIO | CATEGORY_LADDER | CATEGORY_FIRE;
 
-            // 1. Restaurar colisión con plataformas
-            this.body.collisionFilter.mask = CATEGORY_DEFAULT | CATEGORY_PLATFORM | CATEGORY_MARIO | CATEGORY_LADDER | CATEGORY_FIRE;
+                const speed = 2.0 + (currentLevel - 1) * 0.2;
+                let direction = (Math.floor(this.body.position.y / 100) % 2 === 0) ? -speed : speed;
 
-            // 2. Determinar la dirección según la altura de la pantalla (Zigzag)
-            // Si está en viga par o impar, le damos un empuje inicial para que empiece a rodar
-            const speed = 2.0 + (currentLevel - 1) * 0.2;
-            let direction = (Math.floor(this.body.position.y / 100) % 2 === 0) ? -speed : speed;
-
-            Matter.Body.setVelocity(this.body, { 
-                x: direction, 
-                y: this.body.velocity.y 
-            });
+                Matter.Body.setVelocity(this.body, { 
+                    x: direction, 
+                    y: this.body.velocity.y 
+                });
+            }
         }
     }
-}
 
     isOffscreen() {
         return (this.body.position.y > height + 50);
@@ -61,19 +55,45 @@ updateLadderFall() {
     show() {
         push();
         translate(this.body.position.x, this.body.position.y);
-        rotate(this.body.angle);
+        imageMode(CENTER);
 
-        rectMode(CENTER);
-        ellipseMode(RADIUS);
+        if (typeof spriteSheet !== 'undefined' && spriteSheet && spriteSheet.width > 0) {
+            noSmooth();
+            
+            let vx = this.body.velocity.x;
 
-        fill(160, 82, 45);
-        stroke(255, 200, 100);
-        strokeWeight(1.5);
-        circle(0, 0, this.r);
+            let frameIndex = Math.floor(Math.abs(this.body.position.x) / 15) % 4;
+           
+            const frameCoords = [
+                { x: 66, y: 133 },
+                { x: 81, y: 133 },
+                { x: 66, y: 145 },
+                { x: 81, y: 145 }
+            ];
 
-        stroke(0);
-        line(-this.r + 2, 0, this.r - 2, 0);
+            let currentFrame = frameCoords[frameIndex];
+            let subImg = spriteSheet.get(currentFrame.x, currentFrame.y, 12, 10);
 
+            // Si el barril va hacia la izquierda, invertimos horizontalmente el sprite
+            if (vx < -0.1) {
+                scale(-1, 1);
+            }
+
+            image(subImg, 0, 0, this.r * 2, this.r * 1.6);
+        } else {
+            // Fallback geométrico de respaldo
+            rotate(this.body.angle);
+            rectMode(CENTER);
+            ellipseMode(RADIUS);
+
+            fill(160, 82, 45);
+            stroke(255, 200, 100);
+            strokeWeight(1.5);
+            circle(0, 0, this.r);
+
+            stroke(0);
+            line(-this.r + 2, 0, this.r - 2, 0);
+        }
         pop();
     }
 }
