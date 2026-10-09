@@ -21,10 +21,17 @@ let currentLevel = 1;
 const maxLevels = 3;
 let score = 0;
 let lives = 3;
-let gameState = "START"; // "START", "PLAYING", "DYING", "WIN_LEVEL", "GAME_OVER", "GAME_CLEAR"
+let gameState = "START"; // "START", "PLAYING", "PAUSED", "DYING", "WIN_LEVEL", "GAME_OVER", "GAME_CLEAR"
 let respawnAt = 0;
 let bonus = 5000;
 let bonusElapsed = 0;
+let difficulty = 1;
+let menu, gameCanvas;
+let menuPage = "main";
+let pausedAt = 0;
+let confirmAction = null;
+let waitForControlsRelease = false;
+let skipNextTick = false;
 
 let goal;
 let oilDrum;
@@ -42,7 +49,12 @@ function loadMarioImage() {
         loaded => { marioImg = loaded; }, () => { marioImg = null; });
 }
 function setup() {
-    createCanvas(540, 760);
+    const canvas = createCanvas(540, 760);
+    canvas.parent('game');
+    gameCanvas = canvas.elt;
+    gameCanvas.setAttribute('tabindex', '-1');
+    gameCanvas.setAttribute('aria-label', 'Tablero: flechas para moverse y espacio para saltar');
+    setupMenu();
     loadMarioImage();
     loadImage('assets/donkey-kong.png', img => { kongImg = img; }, () => { kongImg = null; });
     loadImage('assets/princess.png', img => { princessImg = img; }, () => { princessImg = null; });
@@ -236,17 +248,17 @@ function loadLevel(level) {
     platforms.push(new Platform(180, 80, 280, pHeight, -slope));
 
     // Escaleras
-    ladders.push(new Ladder(430, 655, 20, 110));
-    ladders.push(new Ladder(110, 545, 20, 110));
-    ladders.push(new Ladder(430, 435, 20, 110));
-    ladders.push(new Ladder(110, 325, 20, 110));
-    ladders.push(new Ladder(430, 215, 20, 110));
-    ladders.push(new Ladder(220, 110, 20, 120)); // Llega hasta la meta de Pauline
+    ladders.push(new Ladder(430, 20, platforms[1], platforms[0]));
+    ladders.push(new Ladder(110, 20, platforms[2], platforms[1]));
+    ladders.push(new Ladder(430, 20, platforms[3], platforms[2]));
+    ladders.push(new Ladder(110, 20, platforms[4], platforms[3]));
+    ladders.push(new Ladder(430, 20, platforms[5], platforms[4]));
+    ladders.push(new Ladder(220, 20, platforms[6], platforms[5]));
 
     // Escaleras parciales / trampas
-    ladders.push(new Ladder(270, 560, 20, 65));
-    ladders.push(new Ladder(270, 345, 20, 65));
-    ladders.push(new Ladder(300, 235, 20, 65));
+    ladders.push(new Ladder(270, 20, null, platforms[1]));
+    ladders.push(new Ladder(270, 20, null, platforms[3]));
+    ladders.push(new Ladder(300, 20, null, platforms[4]));
 
     // DIFICULTAD
     if (level === 1) {
@@ -262,27 +274,32 @@ function loadLevel(level) {
         fireballs.push(new Fireball(380, 380, 10));
         fireballs.push(new Fireball(200, 270, 10));
     }
+    barrelInterval /= difficulty;
 }
 
 function draw() {
     background(10, 10, 15);
+    let playedTime = skipNextTick ? 0 : deltaTime;
+    if (gameState === "PLAYING") skipNextTick = false;
     drawDonkeyKong();
     if (gameState === "DYING" && millis() >= respawnAt) {
         loadLevel(currentLevel);
         gameState = "PLAYING";
+        playedTime = 0;
+        if (document.hidden) pauseGame();
     }
 
     drawPauline();
 
     if (gameState === "PLAYING") {
-        bonusElapsed += deltaTime;
+        bonusElapsed += playedTime;
         const ticks = Math.floor(bonusElapsed / 2000);
         bonusElapsed %= 2000;
         bonus = Math.max(0, bonus - ticks * 100);
         if (bonus === 0) playerDied();
     }
     if (gameState === "PLAYING") {
-        mario.hammerTime = Math.max(0, mario.hammerTime - deltaTime);
+        mario.hammerTime = Math.max(0, mario.hammerTime - playedTime);
         if (mario.hammerTime > 0) {
             const head = mario.hammerHead();
             const bounds = { min: { x: head.x - 12, y: head.y - 8 },
@@ -297,6 +314,9 @@ function draw() {
                     score += 300;
                 }
             }
+        }
+        if (mario.isClimbing) {
+            mario.body.force.y -= mario.body.mass * world.gravity.y * world.gravity.scale;
         }
         Engine.update(engine);
         if (gameState === "PLAYING") {
@@ -350,15 +370,17 @@ function draw() {
     pop();
 
     // Controles de Mario
-    if (gameState === "PLAYING") {
+    if (waitForControlsRelease && ![32, LEFT_ARROW, RIGHT_ARROW, UP_ARROW, DOWN_ARROW].some(code => keyIsDown(code))) {
+        waitForControlsRelease = false;
+    }
+    document.getElementById('pause-toggle').hidden = gameState !== "PLAYING";
+    if (gameState === "PLAYING" && !waitForControlsRelease) {
         let isClimbingPressed = false;
 
         if (keyIsDown(UP_ARROW) && mario.touchingLadder && mario.hammerTime === 0) {
-            mario.climb(-1);
-            isClimbingPressed = true;
+            isClimbingPressed = mario.climb(-1);
         } else if (keyIsDown(DOWN_ARROW) && mario.touchingLadder && mario.hammerTime === 0) {
-            mario.climb(1);
-            isClimbingPressed = true;
+            isClimbingPressed = mario.climb(1);
         }
 
         if (!isClimbingPressed) {
@@ -370,15 +392,6 @@ function draw() {
         }
     } 
     // OVERLAYS / MENÚS DE ESTADO
-    else if (gameState === "START") {
-        showOverlay("DONKEY KONG", "Presiona ENTER para comenzar");
-        push();
-        fill(255);
-        textAlign(CENTER, CENTER);
-        textSize(16);
-        text("← → caminar · ↑ ↓ escaleras\nESPACIO saltar\nMartillo automático: sin salto ni escalada\nMeta: llegar a la princesa\nENTER avanzar · R reiniciar al terminar", width / 2, height / 2 + 130);
-        pop();
-    }
     else if (gameState === "WIN_LEVEL") {
         showOverlay(`¡NIVEL ${currentLevel} COMPLETADO!`, "Presiona ENTER para el siguiente nivel", `Puntaje actual: ${score}`);
     } 
@@ -506,13 +519,145 @@ function showOverlay(title, subtitle, extraInfo = "") {
     pop();
 }
 
-function keyPressed() {
-    if (keyCode === ENTER && gameState === "START") {
-        loadLevel(currentLevel);
-        gameState = "PLAYING";
+function setupMenu() {
+    menu = document.getElementById('game-menu');
+    document.getElementById('play').onclick = startGame;
+    document.getElementById('controls-open').onclick = () => showMenu('controls');
+    document.getElementById('settings-open').onclick = () => showMenu('settings');
+    document.getElementById('controls-back').onclick = () => showMenu('main');
+    document.getElementById('settings-back').onclick = () => showMenu('main');
+    document.getElementById('pause-toggle').onclick = pauseGame;
+    document.getElementById('resume').onclick = resumeGame;
+    document.getElementById('restart').onclick = () => requestMenuAction('restart');
+    document.getElementById('home').onclick = () => requestMenuAction('home');
+    document.getElementById('confirm-cancel').onclick = () => { confirmAction = null; showMenu('pause'); };
+    document.getElementById('confirm-accept').onclick = confirmMenuAction;
+    window.addEventListener('blur', pauseGame);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
+    const fullscreen = document.getElementById('fullscreen');
+    fullscreen.disabled = !document.fullscreenEnabled;
+    fullscreen.onclick = toggleFullscreen;
+    if (fullscreen.disabled) document.getElementById('settings-status').textContent = 'Pantalla completa no disponible en este navegador.';
+    document.addEventListener('fullscreenchange', () => {
+        fullscreen.textContent = document.fullscreenElement ? 'SALIR DE PANTALLA COMPLETA' : 'PANTALLA COMPLETA';
+    });
+    menu.addEventListener('keydown', event => {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            if (event.repeat) return;
+            if (gameState === "PAUSED") {
+                if (menuPage === 'confirm') { confirmAction = null; showMenu('pause'); }
+                else resumeGame();
+            } else showMenu('main');
+        }
+        if (!['ArrowUp', 'ArrowDown', 'Tab'].includes(event.key)) return;
+        if (event.target.tagName === 'SELECT' && event.key !== 'Tab') return;
+        const items = [...menu.querySelector(`[data-panel="${menuPage}"]`).querySelectorAll('button:not(:disabled), select')];
+        const direction = event.key === 'ArrowUp' || event.shiftKey ? -1 : 1;
+        const next = (items.indexOf(document.activeElement) + direction + items.length) % items.length;
+        items[next].focus();
+        event.preventDefault();
+    });
+    showMenu('main');
+}
+
+function showMenu(page) {
+    menuPage = page;
+    menu.hidden = false;
+    gameCanvas.setAttribute('tabindex', '-1');
+    for (const panel of menu.querySelectorAll('[data-panel]')) panel.hidden = panel.dataset.panel !== page;
+    const titles = { main: 'DONKEY KONG', controls: 'CONTROLES', settings: 'CONFIGURACIÓN', pause: 'PAUSA', confirm: 'CONFIRMAR' };
+    const first = { main: 'play', controls: 'controls-back', settings: 'difficulty', pause: 'resume', confirm: 'confirm-cancel' };
+    document.getElementById('menu-title').textContent = titles[page];
+    if (page === 'pause') document.getElementById('pause-info').textContent = `NIVEL ${currentLevel} · PUNTOS ${score} · VIDAS ${lives}`;
+    document.getElementById(first[page]).focus();
+}
+
+async function toggleFullscreen() {
+    const status = document.getElementById('settings-status');
+    try {
+        if (document.fullscreenElement) await document.exitFullscreen();
+        else await document.documentElement.requestFullscreen();
+        status.textContent = '';
+    } catch {
+        status.textContent = 'No se pudo cambiar la pantalla completa. Inténtalo de nuevo.';
+    }
+}
+
+function startGame() {
+    const selected = Number(document.getElementById('difficulty').value);
+    difficulty = [0.8, 1, 1.2].includes(selected) ? selected : 1;
+    currentLevel = 1;
+    lives = 3;
+    score = 0;
+    loadLevel(currentLevel);
+    gameState = "PLAYING";
+    confirmAction = null;
+    skipNextTick = false;
+    waitForControlsRelease = true;
+    menu.hidden = true;
+    gameCanvas.setAttribute('tabindex', '0');
+    gameCanvas.focus();
+}
+
+function pauseGame() {
+    if (gameState !== "PLAYING") return;
+    pausedAt = millis();
+    gameState = "PAUSED";
+    showMenu('pause');
+}
+
+function resumeGame() {
+    if (gameState !== "PAUSED") return;
+    lastBarrelTime += millis() - pausedAt;
+    gameState = "PLAYING";
+    confirmAction = null;
+    waitForControlsRelease = true;
+    skipNextTick = true;
+    Matter.Body.setVelocity(mario.body, { x: 0, y: mario.body.velocity.y });
+    menu.hidden = true;
+    gameCanvas.setAttribute('tabindex', '0');
+    gameCanvas.focus();
+}
+
+function requestMenuAction(action) {
+    if (gameState !== "PAUSED") return;
+    confirmAction = action;
+    document.getElementById('confirm-message').textContent = action === 'restart' ? '¿Reiniciar desde el nivel 1?' : '¿Volver al menú de inicio?';
+    showMenu('confirm');
+}
+
+function confirmMenuAction() {
+    if (gameState !== "PAUSED" || !confirmAction) return;
+    const action = confirmAction;
+    startGame();
+    if (action === 'home') {
+        gameState = "START";
+        showMenu('main');
+    }
+}
+
+function keyPressed(event) {
+    if ((keyCode === 27 || key === 'p' || key === 'P') && ['PLAYING', 'PAUSED'].includes(gameState)) {
+        if (event && event.repeat) return false;
+        if (gameState === "PLAYING") pauseGame();
+        else if (menuPage === 'confirm') { confirmAction = null; showMenu('pause'); }
+        else resumeGame();
         return false;
     }
-    if (keyCode === 32 && gameState === "PLAYING") { // ESPACIO
+    if (document.activeElement.tagName === 'BUTTON') {
+        if (keyCode === ENTER) { document.activeElement.click(); return false; }
+        if (keyCode === 32) return;
+    }
+    if (gameState === "START") {
+        if (keyCode === ENTER && document.activeElement.tagName !== 'SELECT') {
+            if (menuPage === 'main') startGame();
+            return false;
+        }
+        return;
+    }
+    if (keyCode === 32 && gameState === "PLAYING" && !waitForControlsRelease) { // ESPACIO
         mario.jump();
     }
 
@@ -525,11 +670,7 @@ function keyPressed() {
 
     // Reiniciar desde el Nivel 1 si pierdes todas las vidas o completas el juego
     if ((key === 'r' || key === 'R') && (gameState === "GAME_OVER" || gameState === "GAME_CLEAR")) {
-        currentLevel = 1;
-        lives = 3;
-        score = 0;
-        gameState = "PLAYING";
-        loadLevel(currentLevel);
+        startGame();
     }
     if ([32, ENTER, LEFT_ARROW, RIGHT_ARROW, UP_ARROW, DOWN_ARROW].includes(keyCode)) return false;
 }
