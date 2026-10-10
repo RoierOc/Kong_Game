@@ -531,9 +531,18 @@ function draw() {
 function drawOilDrum(oilDrum) {
     push();
     translate(oilDrum.position.x, oilDrum.position.y);
+    imageMode(CENTER);
+    if (spriteSheet && spriteSheet.width > 0) {
+        noSmooth();
+        const frameIndex = Math.floor(animationTime / 250) % 2;
+        const sourceX = frameIndex === 0 ? 125 : 144;
+        const frame = spriteSheet.get(sourceX, 131, 16, 24);
+        image(frame, 0, -6, 32, 48);
+        pop();
+        return;
+    }
     if (oilImg) {
         noSmooth();
-        imageMode(CENTER);
         image(oilImg, 0, -13, 32, 62);
         pop();
         return;
