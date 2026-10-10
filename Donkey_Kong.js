@@ -33,6 +33,7 @@ let pausedAt = 0;
 let confirmAction = null;
 let waitForControlsRelease = false;
 let skipNextTick = false;
+let animationTime = 0;
 
 let goal;
 let oilDrums = [];
@@ -43,14 +44,27 @@ let fireSpawnInterval = 5000;
 let lastFireSpawnTime = 0;
 
 let marioImg; 
+let spriteSheet;
 let kongImg, princessImg, oilImg;
 
 function loadMarioImage() {
-    // Carga aquí la ruta o URL de tu imagen o sprite
-    // Puedes usar URLs directas o rutas locales (ej: 'assets/mario.png')
-    loadImage('https://preview.redd.it/smb1-mario-in-his-donkey-kong-colors-v0-5m5hkqsvnqcf1.png?auto=webp&s=c4d31b7d3cfd90c35672ff596b136762ddaf8d55',
+    loadImage('assets/mario.png',
         loaded => { marioImg = loaded; }, () => { marioImg = null; });
 }
+
+function loadSpriteSheet() {
+    loadImage('assets/misc-2.png', img => {
+        img.loadPixels();
+        for (let i = 0; i < img.pixels.length; i += 4) {
+            if (img.pixels[i] > 240 && img.pixels[i + 1] > 240 && img.pixels[i + 2] > 240) {
+                img.pixels[i + 3] = 0;
+            }
+        }
+        img.updatePixels();
+        spriteSheet = img;
+    }, () => { spriteSheet = null; });
+}
+
 function setup() {
     const canvas = createCanvas(540, 760);
     canvas.parent('game');
@@ -59,6 +73,7 @@ function setup() {
     gameCanvas.setAttribute('aria-label', 'Tablero: flechas para moverse y espacio para saltar');
     setupMenu();
     loadMarioImage();
+    loadSpriteSheet();
     loadImage('assets/donkey-kong.png', img => { kongImg = img; }, () => { kongImg = null; });
     loadImage('assets/princess.png', img => { princessImg = img; }, () => { princessImg = null; });
     loadImage('assets/oil.png', img => { oilImg = img; }, () => { oilImg = null; });
@@ -367,6 +382,7 @@ function draw() {
     background(10, 10, 15);
     let playedTime = skipNextTick ? 0 : deltaTime;
     if (gameState === "PLAYING") skipNextTick = false;
+    if (gameState === "PLAYING" || gameState === "DYING") animationTime += playedTime;
     drawDonkeyKong();
     if (gameState === "DYING" && millis() >= respawnAt) {
         loadLevel(currentLevel);
@@ -540,18 +556,49 @@ function drawOilDrum(oilDrum) {
 
 function drawHammer(x, y) {
     push();
-    rectMode(CENTER);
-    noStroke();
-    fill(180, 110, 45);
-    rect(x, y + 9, 5, 18);
-    fill(220);
-    rect(x, y, 24, 16);
+    translate(x, y);
+    imageMode(CENTER);
+    if (spriteSheet && spriteSheet.width > 0) {
+        noSmooth();
+        image(spriteSheet.get(196, 140, 7, 15), 0, 0, 16, 32);
+    } else {
+        rectMode(CENTER);
+        noStroke();
+        fill(180, 110, 45);
+        rect(0, 9, 5, 18);
+        fill(220);
+        rect(0, 0, 24, 16);
+    }
     pop();
 }
 
 function drawDonkeyKong() {
     push();
     translate(kong.x, kong.y);
+    if (spriteSheet && spriteSheet.width > 0) {
+        noSmooth();
+        imageMode(CENTER);
+        let subImg;
+        if (gameState === "PLAYING") {
+            const timeUntilNextBarrel = barrelInterval - (millis() - lastBarrelTime);
+            if (timeUntilNextBarrel <= 800 && timeUntilNextBarrel > 500) {
+                subImg = spriteSheet.get(9, 27, 48, 32);
+            } else if (timeUntilNextBarrel <= 500 && timeUntilNextBarrel > 200) {
+                subImg = spriteSheet.get(153, 27, 48, 32);
+            } else if (timeUntilNextBarrel <= 200) {
+                subImg = spriteSheet.get(249, 27, 48, 32);
+            } else {
+                const idleFrame = Math.floor(animationTime / 400) % 3;
+                const x = [57, 201, 105][idleFrame];
+                subImg = spriteSheet.get(x, 27, 48, 32);
+            }
+        } else {
+            subImg = spriteSheet.get(105, 27, 48, 32);
+        }
+        image(subImg, 0, 0, 72, 54);
+        pop();
+        return;
+    }
     if (kongImg) {
         noSmooth();
         imageMode(CENTER);
@@ -697,6 +744,7 @@ function startGame() {
     currentLevel = 1;
     lives = 3;
     score = 0;
+    animationTime = 0;
     loadLevel(currentLevel);
     gameState = "PLAYING";
     confirmAction = null;
