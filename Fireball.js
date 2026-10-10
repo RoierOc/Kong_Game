@@ -1,6 +1,8 @@
 class Fireball {
     constructor(x, y, radius = 10) {
         this.r = radius;
+        this.createdAt = millis();
+        this.lifetime = 6500;
 
         this.body = Bodies.circle(x, y, this.r, {
             friction: 0.0,
@@ -44,6 +46,10 @@ class Fireball {
 
     removeFromWorld() {
         World.remove(world, this.body);
+    }
+
+    isExpired() {
+        return millis() - this.createdAt >= this.lifetime;
     }
 
     show() {
