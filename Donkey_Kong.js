@@ -18,11 +18,12 @@ let hammers = [];
 
 // --- SISTEMA DE PUNTOS, VIDAS Y ESTADOS DE JUEGO ---
 let currentLevel = 1;
-const maxLevels = 3;
+const maxLevels = 5;
 let score = 0;
 let lives = 3;
 let gameState = "START"; // "START", "PLAYING", "PAUSED", "DYING", "WIN_LEVEL", "GAME_OVER", "GAME_CLEAR"
 let respawnAt = 0;
+let levelAdvanceAt = 0;
 let bonus = 5000;
 let bonusElapsed = 0;
 let difficulty = 1;
@@ -35,32 +36,37 @@ let skipNextTick = false;
 let animationTime = 0;
 
 let goal;
-let oilDrum;
+let oilDrums = [];
 const kong = { x: 80, y: 52 };
 let lastBarrelTime = 0;
 let barrelInterval = 3200;
+let fireSpawnInterval = 5000;
+let lastFireSpawnTime = 0;
 
 let marioImg; 
-let spriteSheet; // Hoja de sprites (misc-2.png / gif)
+let spriteSheet;
 let kongImg, princessImg, oilImg;
 
-function preload() {
-    marioImg = loadImage('assets/mario.png', loaded => { marioImg = loaded; }, () => { marioImg = null; });
-    spriteSheet = loadImage('assets/misc-2.png', img => { 
-        // Volver transparente el fondo blanco automáticamente
+function loadMarioImage() {
+    loadImage('assets/mario.png',
+        loaded => { marioImg = loaded; }, () => { marioImg = null; });
+}
+
+function loadSpriteSheet() {
+    loadImage('assets/misc-2.0.png', img => {
         img.loadPixels();
         for (let i = 0; i < img.pixels.length; i += 4) {
-            if (img.pixels[i] > 240 && img.pixels[i + 1] > 240 && img.pixels[i + 2] > 240) {
+            let r = img.pixels[i];
+            let g = img.pixels[i + 1];
+            let b = img.pixels[i + 2];
+            if (g > 150 && r < 120 && b < 120) {
                 img.pixels[i + 3] = 0;
             }
         }
         img.updatePixels();
         spriteSheet = img;
     }, () => { spriteSheet = null; });
-    
-    princessImg = loadImage('assets/princess.png', img => { princessImg = img; }, () => { princessImg = null; });
 }
-
 function setup() {
     const canvas = createCanvas(540, 760);
     canvas.parent('game');
@@ -68,7 +74,10 @@ function setup() {
     gameCanvas.setAttribute('tabindex', '-1');
     gameCanvas.setAttribute('aria-label', 'Tablero: flechas para moverse y espacio para saltar');
     setupMenu();
+    loadMarioImage();
+    loadSpriteSheet();
     loadImage('assets/donkey-kong.png', img => { kongImg = img; }, () => { kongImg = null; });
+    loadImage('assets/princess.png', img => { princessImg = img; }, () => { princessImg = null; });
     loadImage('assets/oil.png', img => { oilImg = img; }, () => { oilImg = null; });
 
     engine = Engine.create();
@@ -87,7 +96,8 @@ function setup() {
             const barrel = bodyA.isBarrel ? bodyA : (bodyB.isBarrel ? bodyB : null);
             const ladder = bodyA.isLadder ? bodyA : (bodyB.isLadder ? bodyB : null);
             const fire = bodyA.isFireball ? bodyA : (bodyB.isFireball ? bodyB : null);
-            if (barrel && (bodyA === oilDrum || bodyB === oilDrum)) {
+            const oilDrum = bodyA.isOilDrum ? bodyA : (bodyB.isOilDrum ? bodyB : null);
+            if (barrel && oilDrum) {
                 consumeBarrelAtOilDrum(barrel);
             }
 
@@ -99,11 +109,12 @@ function setup() {
             // 2. CONDICIÓN DE VICTORIA (Mario llega al final de la última escalera)
             const isMarioGoal = (bodyA === mario.body && bodyB === goal) || (bodyB === mario.body && bodyA === goal);
             if (isMarioGoal && gameState === "PLAYING") {
-                score += 500 + bonus; 
+                score += 500 + bonus; // Premio del nivel y tiempo restante
                 if (currentLevel < maxLevels) {
                     gameState = "WIN_LEVEL";
+                    levelAdvanceAt = millis() + 1200;
                 } else {
-                    gameState = "GAME_CLEAR"; 
+                    gameState = "GAME_CLEAR"; // Ganó los 5 niveles
                 }
             }
 
@@ -152,6 +163,7 @@ function setup() {
                     mario.touchingLadder = true;
                 }
                 if (otherBody.isBarrel || otherBody.isFireball) {
+                    console.log("¡Mario fue golpeado!");
                     playerDied();
                 }
             }
@@ -186,25 +198,85 @@ function destroyBarrel(body, points) {
     score += points;
 }
 
+// --- MANEJO DE PÉRDIDA DE VIDAS ---
 function consumeBarrelAtOilDrum(body) {
     if (!barrels.some(barrel => barrel.body === body)) return;
     destroyBarrel(body, 0);
-    if (fireballs.length < currentLevel + 1) {
+    if (fireballs.length < oilDrums.length + currentLevel && oilDrums.length > 0) {
+        const oilDrum = oilDrums[Math.floor(random(oilDrums.length))];
         fireballs.push(new Fireball(oilDrum.position.x, oilDrum.position.y - 28, 10));
     }
 }
 
 function playerDied() {
     if (gameState !== "PLAYING") return;
-    gameState = "DYING";
     lives--;
     if (lives > 0) {
+        // Reaparecer al inicio del nivel actual
+        gameState = "DYING";
         respawnAt = millis() + 500;
     } else {
+        // Te quedaste sin vidas -> Game Over
         gameState = "GAME_OVER";
+        currentLevel = 1;
     }
 }
 
+function getLevelLayout(level) {
+    const layouts = {
+        1: {
+            platforms: [[270, 720, 540, 0], [290, 600, 480, -4], [230, 440, 420, 5],
+                [320, 280, 460, -5], [230, 100, 400, 4]],
+            mainLadders: [410, 120, 430, 170],
+            partialLadders: [[245, 1], [300, 3]],
+            hammers: [[220, 1]],
+            fireSources: [[400, 1]],
+            goalX: 230
+        },
+        2: {
+            platforms: [[270, 720, 540, 0], [220, 600, 420, 5], [340, 480, 390, -6],
+                [205, 360, 450, 4], [325, 240, 380, -7], [180, 100, 330, 5]],
+            mainLadders: [445, 115, 390, 130, 240],
+            partialLadders: [[270, 1], [300, 3], [390, 4]],
+            hammers: [[140, 1], [390, 3]],
+            fireSources: [[60, 1], [30, 3]],
+            goalX: 180
+        },
+        3: {
+            platforms: [[270, 720, 540, 0], [305, 620, 430, -7], [190, 520, 360, 5],
+                [350, 420, 390, -6], [210, 320, 350, 7], [335, 220, 390, -5],
+                [145, 100, 260, 6]],
+            mainLadders: [430, 90, 445, 105, 390, 165],
+            partialLadders: [[250, 1], [300, 3], [260, 4], [360, 5]],
+            hammers: [[120, 1], [290, 4]],
+            fireSources: [[490, 1], [210, 3], [240, 5]],
+            goalX: 145
+        },
+        4: {
+            platforms: [[270, 720, 540, 0], [210, 630, 400, 6], [350, 545, 370, -7],
+                [180, 460, 350, 5], [365, 375, 360, -6], [210, 290, 340, 7],
+                [350, 205, 350, -5], [250, 100, 170, -4]],
+            mainLadders: [430, 95, 445, 105, 390, 115, 390],
+            partialLadders: [[270, 1], [320, 3], [250, 5], [300, 6]],
+            hammers: [[140, 1], [450, 4]],
+            fireSources: [[20, 1], [20, 3], [360, 5], [490, 6]],
+            goalX: 250
+        },
+        5: {
+            platforms: [[270, 720, 540, 0], [360, 645, 280, -7], [175, 570, 320, 6],
+                [370, 495, 330, -7], [160, 420, 310, 7], [380, 345, 320, -6],
+                [170, 270, 300, 7], [370, 195, 310, -6], [250, 105, 260, 5]],
+            mainLadders: [430, 445, 100, 400, 110, 400, 100, 350],
+            partialLadders: [[30,0], [220, 7], [290, 6]],
+            hammers: [[210, 1], [260, 6]],
+            fireSources: [[500, 0], [500, 3], [480, 5], [30, 6]],
+            goalX: 230
+        },
+    };
+    return layouts[level] || layouts[1];
+}
+
+// --- CARGADOR DE NIVELES ---
 function loadLevel(level) {
     World.clear(world, false);
     Engine.clear(engine);
@@ -216,83 +288,113 @@ function loadLevel(level) {
     ladders = [];
     barrels = [];
     fireballs = [];
-    hammers = [Bodies.rectangle(180, 585, 22, 26, {
-        isStatic: true, isSensor: true, isHammer: true,
-        collisionFilter: { group: 0, category: CATEGORY_DEFAULT, mask: CATEGORY_MARIO }
-    }), Bodies.rectangle(360, 247, 22, 26, {
-        isStatic: true, isSensor: true, isHammer: true,
-        collisionFilter: { group: 0, category: CATEGORY_DEFAULT, mask: CATEGORY_MARIO }
-    })];
-    World.add(world, hammers);
+    oilDrums = [];
+    const layout = getLevelLayout(level);
 
     mario = new Mario(60, 690, 24, 34);
 
-    const wallLeft = Bodies.rectangle(-10, height / 2, 20, height, { isStatic: true, collisionFilter: { group: 0, category: CATEGORY_DEFAULT, mask: 0xFFFF } });
-    const wallRight = Bodies.rectangle(width + 10, height / 2, 20, height, { isStatic: true, collisionFilter: { group: 0, category: CATEGORY_DEFAULT, mask: 0xFFFF } });
+    // Las paredes contienen a Mario y a los enemigos. Las plataformas se
+    // extienden ligeramente para que los barriles no entren en huecos laterales.
+    const wallMask = CATEGORY_MARIO | CATEGORY_BARREL | CATEGORY_FIRE;
+    const wallLeft = Bodies.rectangle(-10, height / 2, 20, height, {
+        isStatic: true,
+        collisionFilter: { group: 0, category: CATEGORY_DEFAULT, mask: wallMask }
+    });
+    const wallRight = Bodies.rectangle(width + 10, height / 2, 20, height, {
+        isStatic: true,
+        collisionFilter: { group: 0, category: CATEGORY_DEFAULT, mask: wallMask }
+    });
     World.add(world, [wallLeft, wallRight]);
 
-    goal = Bodies.rectangle(220, 55, 30, 20, { isStatic: true, isSensor: true });
-    World.add(world, goal);
-    oilDrum = Bodies.rectangle(28, 692, 32, 36, {
-        isStatic: true, isSensor: true,
-        collisionFilter: { group: 0, category: CATEGORY_FIRE, mask: CATEGORY_BARREL }
-    });
-    World.add(world, oilDrum);
-
-    const pWidth = 460;
     const pHeight = 16;
-    const slope = radians(4.5);
-
-    platforms.push(new Platform(270, 720, 540, pHeight, 0));
-    platforms.push(new Platform(230, 610, pWidth, pHeight, slope));
-    platforms.push(new Platform(310, 500, pWidth, pHeight, -slope));
-    platforms.push(new Platform(230, 390, pWidth, pHeight, slope));
-    platforms.push(new Platform(310, 280, pWidth, pHeight, -slope));
-    platforms.push(new Platform(230, 170, pWidth, pHeight, slope));
-    platforms.push(new Platform(180, 80, 280, pHeight, -slope));
-
-    // Escaleras
-    ladders.push(new Ladder(430, 20, platforms[1], platforms[0]));
-    ladders.push(new Ladder(110, 20, platforms[2], platforms[1]));
-    ladders.push(new Ladder(430, 20, platforms[3], platforms[2]));
-    ladders.push(new Ladder(110, 20, platforms[4], platforms[3]));
-    ladders.push(new Ladder(430, 20, platforms[5], platforms[4]));
-    ladders.push(new Ladder(220, 20, platforms[6], platforms[5]));
-
-    // Escaleras parciales / trampas
-    ladders.push(new Ladder(270, 20, null, platforms[1]));
-    ladders.push(new Ladder(270, 20, null, platforms[3]));
-    ladders.push(new Ladder(300, 20, null, platforms[4]));
-
-    if (level === 1) {
-        barrelInterval = 3200;
-        fireballs.push(new Fireball(120, 600, 10));
-    } else if (level === 2) {
-        barrelInterval = 2400;
-        fireballs.push(new Fireball(120, 600, 10));
-        fireballs.push(new Fireball(380, 380, 10));
-    } else if (level === 3) {
-        barrelInterval = 1700;
-        fireballs.push(new Fireball(120, 600, 10));
-        fireballs.push(new Fireball(380, 380, 10));
-        fireballs.push(new Fireball(200, 270, 10));
+    // Conservar el trazado propio de cada nivel y cerrar solo los huecos
+    // laterales pequeños; no convertir las plataformas en vigas de pantalla completa.
+    const platformEdgeExtension = 28;
+    for (const [x, y, w, angle] of layout.platforms) {
+        platforms.push(new Platform(x, y, w + platformEdgeExtension, pHeight, radians(angle)));
     }
+
+    const topPlatform = platforms[platforms.length - 1];
+    const goalY = topPlatform.surfaceY(layout.goalX) - 16;
+    goal = Bodies.rectangle(layout.goalX, goalY, 30, 20, { isStatic: true, isSensor: true });
+    World.add(world, goal);
+
+    // Donkey se apoya en la última plataforma, igual que la princesa.
+    kong.x = Math.max(35, topPlatform.body.position.x - topPlatform.w / 2 + 55);
+    kong.y = topPlatform.surfaceY(kong.x) - 27;
+
+    // Los martillos se definen como [posición X, índice de plataforma].
+    hammers = layout.hammers.map(([x, platformIndex]) => {
+        const platform = platforms[platformIndex];
+        const y = platform.surfaceY(x) - 18;
+        return Bodies.rectangle(x, y, 22, 26, {
+            isStatic: true, isSensor: true, isHammer: true,
+            collisionFilter: { group: 0, category: CATEGORY_DEFAULT, mask: CATEGORY_MARIO }
+        });
+    });
+    World.add(world, hammers);
+
+    oilDrums = layout.fireSources.map(([x, platformIndex]) => {
+        const platform = platforms[platformIndex];
+        const drum = Bodies.rectangle(x, platform.surfaceY(x) - 18, 32, 36, {
+            isStatic: true, isSensor: true,
+            collisionFilter: { group: 0, category: CATEGORY_FIRE, mask: CATEGORY_BARREL }
+        });
+        drum.isOilDrum = true;
+        World.add(world, drum);
+        return drum;
+    });
+
+    // Cada nivel puede tener una cantidad distinta de plataformas y escaleras.
+    for (let i = 0; i < layout.mainLadders.length; i++) {
+        const topIndex = i + 1;
+        const bottomIndex = i;
+        ladders.push(new Ladder(layout.mainLadders[i], 20, platforms[topIndex], platforms[bottomIndex]));
+    }
+
+    // Escaleras parciales / trampas: [posición X, índice de plataforma inferior].
+    for (const [x, bottomIndex] of layout.partialLadders) {
+        ladders.push(new Ladder(x, 20, null, platforms[bottomIndex]));
+    }
+
+    // DIFICULTAD
+    const levelDifficulty = [
+        { interval: 3200, fireInterval: 6500 },
+        { interval: 2600, fireInterval: 5600 },
+        { interval: 2200, fireInterval: 4700 },
+        { interval: 1900, fireInterval: 3900 },
+        { interval: 1600, fireInterval: 3200 }
+    ][level - 1];
+    barrelInterval = levelDifficulty.interval;
+    fireSpawnInterval = levelDifficulty.fireInterval / difficulty;
+    lastFireSpawnTime = millis();
     barrelInterval /= difficulty;
+}
+
+function advanceToNextLevel() {
+    if (gameState !== "WIN_LEVEL" || currentLevel >= maxLevels) return;
+    currentLevel++;
+    loadLevel(currentLevel);
+    gameState = "PLAYING";
+    waitForControlsRelease = true;
+    skipNextTick = true;
 }
 
 function draw() {
     background(10, 10, 15);
     let playedTime = skipNextTick ? 0 : deltaTime;
     if (gameState === "PLAYING") skipNextTick = false;
+    if (gameState === "PLAYING" || gameState === "DYING") animationTime += playedTime;
+    drawDonkeyKong();
     if (gameState === "DYING" && millis() >= respawnAt) {
-        if (lives > 0) {
-            loadLevel(currentLevel);
-            gameState = "PLAYING";
-        } else gameState = "GAME_OVER";
+        loadLevel(currentLevel);
+        gameState = "PLAYING";
         playedTime = 0;
         if (document.hidden) pauseGame();
     }
-    if (gameState === "PLAYING" || gameState === "DYING") animationTime += playedTime;
+    if (gameState === "WIN_LEVEL" && millis() >= levelAdvanceAt) {
+        advanceToNextLevel();
+    }
 
     drawPauline();
 
@@ -335,9 +437,22 @@ function draw() {
             barrels.push(new Barrel(kong.x + 38, kong.y + 12, 12));
             lastBarrelTime = millis();
         }
+        if (gameState === "PLAYING" && oilDrums.length > 0
+            && millis() - lastFireSpawnTime > fireSpawnInterval) {
+            const oilDrum = oilDrums[Math.floor(random(oilDrums.length))];
+            if (fireballs.length < oilDrums.length + currentLevel) {
+                fireballs.push(new Fireball(oilDrum.position.x, oilDrum.position.y - 28, 10));
+            }
+            lastFireSpawnTime = millis();
+        }
     }
 
     // Renderizar Entidades
+    for (let platform of platforms) platform.show();
+    for (let ladder of ladders) ladder.show();
+    for (const oilDrum of oilDrums) drawOilDrum(oilDrum);
+
+    // Enemigos delante de escaleras y barriles en llamas.
     for (let i = barrels.length - 1; i >= 0; i--) {
         barrels[i].show();
         if (gameState === "PLAYING" && barrels[i].isOffscreen()) {
@@ -345,16 +460,18 @@ function draw() {
         }
     }
 
-    for (let fire of fireballs) fire.show();
-    for (let platform of platforms) platform.show();
-    for (let ladder of ladders) ladder.show();
-    for (const hammer of hammers) drawHammer(hammer.position.x, hammer.position.y);
-    
-    mario.show();
-    drawOilDrum();
-    drawDonkeyKong(); // Dibuja a Kong sincronizado con los barriles
+    for (let i = fireballs.length - 1; i >= 0; i--) {
+        fireballs[i].show();
+        if (gameState === "PLAYING" && fireballs[i].isExpired()) {
+            fireballs[i].removeFromWorld();
+            fireballs.splice(i, 1);
+        }
+    }
 
-    // --- HUD ---
+    for (const hammer of hammers) drawHammer(hammer.position.x, hammer.position.y);
+    mario.show();
+
+    // --- INTERFAZ DE USUARIO / HUD (PUNTOS Y VIDAS) ---
     push();
     fill(255);
     textSize(16);
@@ -400,7 +517,7 @@ function draw() {
     } 
     // OVERLAYS / MENÚS DE ESTADO
     else if (gameState === "WIN_LEVEL") {
-        showOverlay(`¡NIVEL ${currentLevel} COMPLETADO!`, "Presiona ENTER para el siguiente nivel", `Puntaje actual: ${score}`);
+        showOverlay(`¡NIVEL ${currentLevel} COMPLETADO!`, "Preparando el siguiente nivel...", `Puntaje actual: ${score}`);
     } 
     else if (gameState === "GAME_OVER") {
         showOverlay("¡GAME OVER!", "Presiona 'R' para volver al Nivel 1", `Puntaje Final: ${score}`);
@@ -413,88 +530,38 @@ function draw() {
     }
 }
 
-function drawDonkeyKong() {
-    push();
-    translate(kong.x, kong.y);
-    if (spriteSheet && spriteSheet.width > 0) {
-        noSmooth();
-        imageMode(CENTER);
-
-        let subImg;
-        if (gameState === "PLAYING") {
-            let timeUntilNextBarrel = barrelInterval - (millis() - lastBarrelTime);
-
-            // Secuencia exacta de lanzamiento sincronizada con la salida del barril
-            if (timeUntilNextBarrel <= 800 && timeUntilNextBarrel > 500) {
-                // Sprite 1 (Preparación / Levantando brazo)
-                subImg = spriteSheet.get(9, 27, 48, 32); 
-            } else if (timeUntilNextBarrel <= 500 && timeUntilNextBarrel > 200) {
-                // Sprite 4 (Cargando barril)
-                subImg = spriteSheet.get(153, 27, 48, 32); 
-            } else if (timeUntilNextBarrel <= 200) {
-                // Sprite 6 (Lanzando / Soltando el barril exacto)
-                subImg = spriteSheet.get(249, 27, 48, 32); 
-            } else {
-                // Tiempo de espera: Intermitente entre Sprite 2 y 5 (golpes de pecho) o Sprite 3 (quieto)
-                let idleAnim = Math.floor(animationTime / 400) % 3;
-                if (idleAnim === 0) {
-                    subImg = spriteSheet.get(57, 27, 48, 32);  // Sprite 2 (Golpe pecho 1)
-                } else if (idleAnim === 1) {
-                    subImg = spriteSheet.get(201, 27, 48, 32); // Sprite 5 (Golpe pecho 2)
-                } else {
-                    subImg = spriteSheet.get(105, 27, 48, 32); // Sprite 3 (Quieto con barril)
-                }
-            }
-        } else {
-            // Estado estático / Pausa / Menú (Sprite 3 por defecto)
-            subImg = spriteSheet.get(105, 27, 48, 32); 
-        }
-
-        image(subImg, 0, 0, 72, 54);
-    } else {
-        // Fallback geométrico de respaldo por seguridad
-        rectMode(CENTER);
-        noStroke();
-        fill(120, 65, 30);
-        rect(0, 5, 38, 40);
-        rect(-25, 8, 16, 32);
-        rect(25, 8, 16, 32);
-        fill(220, 165, 100);
-        rect(0, -10, 26, 22);
-    }
-    pop();
-}
-
-function drawOilDrum() {
+function drawOilDrum(oilDrum) {
     push();
     translate(oilDrum.position.x, oilDrum.position.y);
     imageMode(CENTER);
-    
     if (spriteSheet && spriteSheet.width > 0) {
         noSmooth();
-        let frameIndex = Math.floor(animationTime / 250) % 2;
-        let sx = frameIndex === 0 ? 125 : 144;
-        let subImg = spriteSheet.get(sx, 131, 16, 24);
-        
-        image(subImg, 0, -6, 32, 48);
-    } else if (oilImg) {
+        const frameIndex = Math.floor(animationTime / 250) % 2;
+        const sourceX = frameIndex === 0 ? 125 : 144;
+        const frame = spriteSheet.get(sourceX, 131, 16, 24);
+        image(frame, 0, -6, 32, 48);
+        pop();
+        return;
+    }
+    if (oilImg) {
         noSmooth();
         image(oilImg, 0, -13, 32, 62);
-    } else {
-        rectMode(CENTER);
-        fill(35, 80, 160);
-        stroke(120, 190, 255);
-        rect(0, 0, 32, 36);
-        noStroke();
-        fill(255, 90, 0);
-        triangle(-14, -18, 0, -40, 14, -18);
-        fill(255, 220, 60);
-        triangle(-7, -18, 0, -32, 7, -18);
-        fill(255);
-        textSize(12);
-        textAlign(CENTER, CENTER);
-        text('OIL', 0, 2);
+        pop();
+        return;
     }
+    rectMode(CENTER);
+    fill(35, 80, 160);
+    stroke(120, 190, 255);
+    rect(0, 0, 32, 36);
+    noStroke();
+    fill(255, 90, 0);
+    triangle(-14, -18, 0, -40, 14, -18);
+    fill(255, 220, 60);
+    triangle(-7, -18, 0, -32, 7, -18);
+    fill(255);
+    textSize(12);
+    textAlign(CENTER, CENTER);
+    text('OIL', 0, 2);
     pop();
 }
 
@@ -502,28 +569,106 @@ function drawHammer(x, y) {
     push();
     translate(x, y);
     imageMode(CENTER);
-    
-    if (typeof spriteSheet !== 'undefined' && spriteSheet && spriteSheet.width > 0) {
+    if (spriteSheet && spriteSheet.width > 0) {
         noSmooth();
-        let subImg = spriteSheet.get(196, 140, 7, 15);
-        
-        image(subImg, 0, 0, 16, 32);
+        image(spriteSheet.get(196, 140, 7, 15), 0, 0, 16, 32);
     } else {
-        // Fallback geométrico por seguridad en caso de que la imagen no cargue
         rectMode(CENTER);
         noStroke();
         fill(180, 110, 45);
-        rect(0, 12, 5, 24);
+        rect(0, 9, 5, 18);
         fill(220);
         rect(0, 0, 24, 16);
     }
     pop();
 }
 
+function drawDonkeyKong() {
+    push();
+    translate(kong.x, kong.y);
+    if (spriteSheet && spriteSheet.width > 0) {
+        noSmooth();
+        imageMode(CENTER);
+        let subImg;
+        if (gameState === "PLAYING") {
+            const timeUntilNextBarrel = barrelInterval - (millis() - lastBarrelTime);
+            if (timeUntilNextBarrel <= 800 && timeUntilNextBarrel > 500) {
+                subImg = spriteSheet.get(9, 27, 48, 32);
+            } else if (timeUntilNextBarrel <= 500 && timeUntilNextBarrel > 200) {
+                subImg = spriteSheet.get(153, 27, 48, 32);
+            } else if (timeUntilNextBarrel <= 200) {
+                subImg = spriteSheet.get(249, 27, 48, 32);
+            } else {
+                const idleFrame = Math.floor(animationTime / 400) % 3;
+                const x = [57, 201, 105][idleFrame];
+                subImg = spriteSheet.get(x, 27, 48, 32);
+            }
+        } else {
+            subImg = spriteSheet.get(105, 27, 48, 32);
+        }
+        image(subImg, 0, 0, 72, 54);
+        pop();
+        return;
+    }
+    if (kongImg) {
+        noSmooth();
+        imageMode(CENTER);
+        image(kongImg, 0, 0, 72, 54);
+        pop();
+        return;
+    }
+    rectMode(CENTER);
+    noStroke();
+    fill(120, 65, 30);
+    rect(0, 5, 38, 40);
+    rect(-25, 8, 16, 32);
+    rect(25, 8, 16, 32);
+    rect(-12, 25, 18, 10);
+    rect(12, 25, 18, 10);
+    fill(220, 165, 100);
+    rect(0, -10, 26, 22);
+    rect(0, 12, 22, 16);
+    fill(0);
+    rect(-6, -14, 4, 4);
+    rect(6, -14, 4, 4);
+    rect(0, -3, 14, 3);
+    pop();
+}
+
 function drawPauline() {
     push();
     imageMode(CENTER);
-    if (princessImg) {
+    if (spriteSheet && spriteSheet.width > 0) {
+        noSmooth();
+        let cycleTime = animationTime % 6000;
+        let localTime = cycleTime % 3000;
+        let isLeft = cycleTime < 3000;
+        let frameStep = Math.floor(localTime / 400) % 2;
+        let subImg;
+
+        if (isLeft) {
+            let sx = (localTime < 2000 && frameStep === 1) ? 133 : 107;
+            subImg = spriteSheet.get(sx, 1, 15, 22);
+        } else {
+            let sx = (localTime < 2000 && frameStep === 1) ? 184 : 158;
+            subImg = spriteSheet.get(sx, 1, 15, 22);
+        }
+
+        image(subImg, goal.position.x, goal.position.y - 4, 30, 44);
+
+        if (localTime < 1500) {
+            push();
+            fill(50, 180, 255);
+            noStroke();
+            textSize(11);
+            textFont('monospace');
+            textAlign(isLeft ? RIGHT : LEFT, CENTER);
+            let textX = isLeft ? goal.position.x - 20 : goal.position.x + 20;
+            text("Help!", textX, goal.position.y - 14);
+            pop();
+        }
+
+    } else if (princessImg) {
         noSmooth();
         image(princessImg, goal.position.x, goal.position.y - 4, 24, 40);
     } else {
@@ -711,12 +856,12 @@ function keyPressed(event) {
         mario.jump();
     }
 
+    // Avanzar de nivel con ENTER
     if (keyCode === ENTER && gameState === "WIN_LEVEL") {
-        currentLevel++;
-        gameState = "PLAYING";
-        loadLevel(currentLevel);
+        advanceToNextLevel();
     }
 
+    // Reiniciar desde el Nivel 1 si pierdes todas las vidas o completas el juego
     if ((key === 'r' || key === 'R') && (gameState === "GAME_OVER" || gameState === "GAME_CLEAR")) {
         startGame();
     }
