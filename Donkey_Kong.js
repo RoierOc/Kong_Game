@@ -683,6 +683,35 @@ function showOverlay(title, subtitle, extraInfo = "") {
 
 function setupMenu() {
     menu = document.getElementById('game-menu');
+    const menuKong = new Image();
+    menuKong.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = menuKong.width;
+        canvas.height = menuKong.height;
+        const context = canvas.getContext('2d');
+        context.drawImage(menuKong, 0, 0);
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+        for (const [frame, shift] of [[0, 0], [1, -3], [2, -2]]) {
+            // El fondo transparente también borró los blancos de la cara.
+            for (let y = 9; y <= 12; y++) {
+                for (let x = 18; x <= 31; x++) {
+                    const i = (y * canvas.width + frame * 48 + x + shift) * 4;
+                    if (pixels.data[i + 3] === 0) pixels.data.set([255, 255, 255, 255], i);
+                }
+            }
+        }
+        context.putImageData(pixels, 0, 0);
+        for (const [frame, shift] of [[0, 0], [1, -3], [2, -2]]) {
+            for (const x of [23, 26]) {
+                context.fillStyle = '#fff';
+                context.fillRect(frame * 48 + x + shift, 4, 2, 2);
+                context.fillStyle = '#000';
+                context.fillRect(frame * 48 + x + shift + 1, 5, 1, 1);
+            }
+        }
+        menu.querySelector('.menu-kong').style.backgroundImage = `url("${canvas.toDataURL()}")`;
+    };
+    menuKong.src = 'assets/menu-kong-frames.png';
     document.getElementById('play').onclick = startGame;
     document.getElementById('controls-open').onclick = () => showMenu('controls');
     document.getElementById('settings-open').onclick = () => showMenu('settings');
@@ -702,6 +731,9 @@ function setupMenu() {
     if (fullscreen.disabled) document.getElementById('settings-status').textContent = 'Pantalla completa no disponible en este navegador.';
     document.addEventListener('fullscreenchange', () => {
         fullscreen.textContent = document.fullscreenElement ? 'SALIR DE PANTALLA COMPLETA' : 'PANTALLA COMPLETA';
+    });
+    menu.addEventListener('focusin', event => {
+        if (event.target.tagName === 'BUTTON') menu.classList.toggle('hammer-up');
     });
     menu.addEventListener('keydown', event => {
         if (event.key === 'Escape') {

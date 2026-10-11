@@ -63,8 +63,19 @@
     .menu-scene { display: none; flex-shrink: 0; width: min(82vw, 940px); margin-top: 16px; align-items: flex-end; justify-content: space-between; }
     .barrel-stack { display: flex; flex-direction: column; align-items: center; width: clamp(40px, 8.5vw, 106px); }
     .barrel-stack img { width: 100%; }
-    .barrel-stack img:first-child { width: 55%; }
-    .menu-kong { width: clamp(100px, 22vw, 264px); }
+    .menu-oil { width: 55%; background: url('assets/menu-oil-frames.png') 0 0 / 200% 100% no-repeat; --frames: 2; --end-position: 200%; --duration: 500ms; }
+    .menu-kong { width: clamp(100px, 22vw, 264px); background: url('assets/menu-kong-frames.png') 0 0 / 300% 100% no-repeat; --frames: 3; --end-position: 150%; --duration: 1200ms; }
+    .menu-kong img { display: block; width: 100%; }
+    .menu-kong img, .menu-oil img { visibility: hidden; }
+    .menu-kong, .menu-oil { background-repeat: no-repeat; image-rendering: pixelated; }
+    #game-menu:has([data-panel="main"]:not([hidden])) .menu-kong,
+    #game-menu:has([data-panel="main"]:not([hidden])) .menu-oil {
+      animation: menu-frames var(--duration) steps(var(--frames)) infinite;
+    }
+    @keyframes menu-frames { to { background-position: var(--end-position) 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      #game-menu .menu-kong, #game-menu .menu-oil { animation: none !important; }
+    }
     #game-menu:has([data-panel="main"]:not([hidden])) .menu-logo,
     #game-menu:has([data-panel="main"]:not([hidden])) .menu-scene { display: flex; }
     #game-menu:has([data-panel="main"]:not([hidden])) #menu-title {
@@ -95,12 +106,13 @@
       top: 50%;
       transform: translateY(-50%);
       width: clamp(40px, 6vw, 76px);
-      aspect-ratio: 95 / 52;
-      background: url('assets/menu-cursor.png') center / contain no-repeat;
+      aspect-ratio: 37 / 34;
+      background: url('assets/menu-cursor-down.png') center / contain no-repeat;
       image-rendering: pixelated;
       visibility: hidden;
       pointer-events: none;
     }
+    #game-menu.hammer-up button::before { background-image: url('assets/menu-cursor-up.png'); }
     #game-menu button:hover, #game-menu button:focus { color: #ff2020; outline: none; }
     #game-menu button:focus::before { visibility: visible; }
     #game-menu select { padding: 10px; border: 1px solid #fff; }
@@ -124,13 +136,13 @@
       </div>
       <div class="menu-scene" aria-hidden="true">
         <div class="barrel-stack">
-          <img src="assets/oil.png" alt="">
+          <div class="menu-oil"><img src="assets/oil.png" alt=""></div>
           <img src="assets/menu-barrel.png" alt="">
           <img src="assets/menu-barrel.png" alt="">
         </div>
-        <img class="menu-kong" src="assets/donkey-kong.png" alt="">
+        <div class="menu-kong"><img src="assets/donkey-kong.png" alt=""></div>
         <div class="barrel-stack">
-          <img src="assets/oil.png" alt="">
+          <div class="menu-oil"><img src="assets/oil.png" alt=""></div>
           <img src="assets/menu-barrel.png" alt="">
           <img src="assets/menu-barrel.png" alt="">
         </div>
