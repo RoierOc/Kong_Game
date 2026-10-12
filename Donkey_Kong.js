@@ -238,7 +238,7 @@ function getLevelLayout(level) {
                 [205, 360, 450, 4], [325, 240, 380, -7], [180, 100, 330, 5]],
             mainLadders: [445, 115, 390, 130, 240],
             partialLadders: [[270, 1], [300, 3], [390, 4]],
-            hammers: [[140, 1], [390, 3]],
+            hammers: [[140, 1], [420, 3]],
             fireSources: [[60, 1], [30, 3]],
             goalX: 180
         },
@@ -501,9 +501,9 @@ function draw() {
     if (gameState === "PLAYING" && !waitForControlsRelease) {
         let isClimbingPressed = false;
 
-        if (keyIsDown(UP_ARROW) && mario.touchingLadder && mario.hammerTime === 0) {
+        if (keyIsDown(UP_ARROW) && (mario.touchingLadder || mario.isClimbing) && mario.hammerTime === 0) {
             isClimbingPressed = mario.climb(-1);
-        } else if (keyIsDown(DOWN_ARROW) && mario.touchingLadder && mario.hammerTime === 0) {
+        } else if (keyIsDown(DOWN_ARROW) && (mario.touchingLadder || mario.isClimbing) && mario.hammerTime === 0) {
             isClimbingPressed = mario.climb(1);
         }
 

@@ -7,6 +7,7 @@ class Mario {
         this.touchingLadder = false;
         this.ladderContacts = new Set();
         this.isClimbing = false;
+        this.isClimbingMoving = false;
         this.climbingLadder = null;
         this.jumpBarrels = null;
         this.hammerTime = 0;
@@ -33,7 +34,7 @@ class Mario {
 
         if (this.isClimbing) return;
 
-        const speed = 3.5;
+        const speed = 2.5;
         Matter.Body.setVelocity(this.body, {
             x: direction * speed,
             y: this.body.velocity.y
@@ -42,6 +43,7 @@ class Mario {
 
     setClimbing(climbingState) {
         this.isClimbing = climbingState;
+        if (!climbingState) this.isClimbingMoving = false;
         this.body.isSensor = climbingState;
         // Matter guarda isSensor en cada contacto; cambiar solo el cuerpo no lo actualiza.
         for (const pair of engine.pairs.list) {
@@ -62,7 +64,9 @@ class Mario {
     climb(direction) {
         if (this.hammerTime > 0) return false;
         const ladder = this.climbingLadder || [...this.ladderContacts].map(body => body.ladder)
-            .find(l => Math.abs(this.body.position.x - l.body.position.x) < (l.w + this.w) / 2);
+            .filter(l => Math.abs(this.body.position.x - l.body.position.x) < (l.w + this.w) / 2)
+            .sort((a, b) => Math.abs(this.body.position.x - a.body.position.x)
+                - Math.abs(this.body.position.x - b.body.position.x))[0];
         if (!ladder) return false;
         const standingY = platform => platform.surfaceY(ladder.body.position.x) - this.h / 2
             - Math.abs(Math.tan(platform.body.angle)) * this.w / 2 - 0.5;
@@ -72,7 +76,9 @@ class Mario {
             || (direction > 0 && this.body.position.y >= bottom - 1))) return false;
         this.setClimbing(true);
         this.climbingLadder = ladder;
-        const y = Math.max(top, Math.min(bottom, this.body.position.y + direction * 3));
+        const previousY = this.body.position.y;
+        const y = Math.max(top, Math.min(bottom, previousY + direction * 3));
+        this.isClimbingMoving = y !== previousY;
         Matter.Body.setPosition(this.body, { x: ladder.body.position.x, y });
         Matter.Body.setVelocity(this.body, { x: 0, y: 0 });
         if ((direction < 0 && y === top && ladder.topPlatform) || (direction > 0 && y === bottom)) {
@@ -84,10 +90,8 @@ class Mario {
     }
 
     stopClimbing() {
-        if (!this.touchingLadder) this.setClimbing(false);
-        if (this.isClimbing) {
-            Matter.Body.setVelocity(this.body, { x: 0, y: 0 });
-        }
+        this.isClimbingMoving = false;
+        Matter.Body.setVelocity(this.body, { x: 0, y: 0 });
     }
 
     stop() {
@@ -146,7 +150,7 @@ class Mario {
         push();
         translate(this.body.position.x, this.body.position.y);
         imageMode(CENTER);
-        scale(this.facing, 1);
+        scale(this.isClimbing ? 1 : this.facing, 1);
 
         if (marioImg) {
             noSmooth(); // Mantiene el pixel art nítido
@@ -159,22 +163,30 @@ class Mario {
 
             let col = 0;
             let row = 0;
+            const spriteWidth = 52;
+            const spriteHeight = 90;
+            let offsetX = 0;
             let offsetY = 20;
 
             // Seleccionar frame exacto según el estado físico
             if (gameState === "DYING") {
                 row = 3; // Fila inferior de colapso/muerte
-                offsetY = -30;
+                offsetY = -28;
                 col = Math.floor(animationTime / 250) % 4;
             } else if (this.hammerTime > 0) {
                 row = 2; // Fila de martillo
-                offsetY = -30; 
+                offsetY = -28;
                 let hammerFrames = [5, 6]; 
                 col = hammerFrames[Math.floor(animationTime / 200) % hammerFrames.length];
-                offsetY = (col === 6) ? -18 : -30;
+                offsetY = (col === 6) ? -16 : -28;
             } else if (this.isClimbing) {
                 row = 1; // Fila de escaleras
-                col = Math.floor(animationTime / 200) % 2;
+                offsetY = 4;
+                col = this.isClimbingMoving
+                    ? Math.floor(animationTime / 350) % 2
+                    : 0;
+                // Los frames de escalada están desplazados a la izquierda dentro de la hoja.
+                offsetX = col === 0 ? 15 : 11;
             } else if (!this.isGrounded) {
                 row = 0;
                 col = 6; // Frame de salto
@@ -189,7 +201,7 @@ class Mario {
 
             let sx = col * cellW;
             let sy = row * cellH;
-            image(marioImg, 0, offsetY, 52, 90, sx, sy, cellW, cellH);
+            image(marioImg, offsetX, offsetY, spriteWidth, spriteHeight, sx, sy, cellW, cellH);
 
         } else {
             rectMode(CENTER);
